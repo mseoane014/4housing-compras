@@ -2643,6 +2643,7 @@ const CONTA_DB={"cuentas":[{"cod":"11110001","desc":"CAJA PESOS","clase":"Activo
 let DIC_TAB='proyectos', DIC_SEARCH='', DIC_STIPO='Todos', DIC_ADMIN=false;
 const DIC_TABS=[['proyectos','Proyectos'],['proveedores','Proveedores'],['articulos','Artículos'],['series','Series activas'],['clasif','Clasificación renglón'],['modulos','Módulos'],['opcog','Opciones OG'],['cuentas','Cuentas contables'],['aux','Auxiliares']];
 let AUX_OPEN='';
+CONTA_DB.tipos = (CONTA_DB.tipos||[]).filter(t=>t.cod!=='1');
 
 function renderDic(){
   const tabs=DIC_TABS.map(t=>'<button class="mtab'+(DIC_TAB===t[0]?' active':'')+'" onclick="setDicTab(\''+t[0]+'\')">'+t[1]+'</button>').join('');
@@ -2754,18 +2755,25 @@ function paintDic(){
       +listCard('Desvío',DESVIO_OPC);
   } else if(DIC_TAB==='cuentas'){
     let ct=(CONTA_DB.cuentas||[]).slice();
+    const verConf=canSeeConfid();
+    if(!verConf) ct=ct.filter(r=>!r.confidencial);
     if(q) ct=ct.filter(r=>((r.cod||'')+' '+(r.desc||'')+' '+(r.clase||'')+' '+(r.tipo||'')).toLowerCase().includes(q));
-    html='<div class="card"><div class="card-h" style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Cuentas contables</h3><span class="meta">'+ct.length+' de '+(CONTA_DB.cuentas||[]).length+'</span></div>'
-      +'<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Clase</th><th>Tipo</th><th>Saldo</th><th>Usa aux.</th><th>Habil.</th></tr></thead><tbody>'
-      +ct.slice(0,600).map(r=>'<tr><td><strong>'+esc(r.cod)+'</strong></td><td>'+esc(r.desc)+'</td><td style="font-size:11.5px">'+esc(r.clase||'—')+'</td><td style="font-size:11.5px">'+esc(r.tipo||'—')+'</td><td style="font-size:11.5px">'+esc(r.saldo||'—')+'</td><td style="font-size:11.5px">'+esc(r.usa_aux||'—')+'</td><td style="font-size:11.5px">'+esc(r.habil||'—')+'</td></tr>').join('')+'</tbody></table></div>'
+    const cCol=verConf?'<th style="text-align:center;width:70px">Confid.</th>':'';
+    html='<div class="card"><div class="card-h" style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Cuentas contables</h3><span class="meta">'+ct.length+' de '+(CONTA_DB.cuentas||[]).length+'</span>'+(verConf?'<span style="margin-left:auto;font-size:11px;color:var(--muted)">Tildá lo confidencial: solo lo ven usuarios habilitados</span>':'')+'</div>'
+      +'<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Clase</th><th>Tipo</th><th>Saldo</th><th>Usa aux.</th><th>Habil.</th>'+cCol+'</tr></thead><tbody>'
+      +ct.slice(0,600).map(r=>'<tr><td><strong>'+esc(r.cod)+'</strong></td><td>'+esc(r.desc)+(r.confidencial?' <span class="badge b-ambar">confid.</span>':'')+'</td><td style="font-size:11.5px">'+esc(r.clase||'—')+'</td><td style="font-size:11.5px">'+esc(r.tipo||'—')+'</td><td style="font-size:11.5px">'+esc(r.saldo||'—')+'</td><td style="font-size:11.5px">'+esc(r.usa_aux||'—')+'</td><td style="font-size:11.5px">'+esc(r.habil||'—')+'</td>'+(verConf?'<td style="text-align:center"><input type="checkbox" '+(r.confidencial?'checked':'')+' onclick="toggleConfidCuenta(\''+esc(r.cod)+'\')"></td>':'')+'</tr>').join('')+'</tbody></table></div>'
       +(ct.length>600?'<div style="font-size:11.5px;color:var(--muted);padding:8px 15px">Mostrando 600 de '+ct.length+'. Usá el buscador.</div>':'')+'</div>';
   } else if(DIC_TAB==='aux'){
-    html='<div style="font-size:12px;color:var(--muted);margin:2px 0 12px">Cada auxiliar de Tango con todas sus opciones. Tocá para desplegar y usá el buscador de cada uno.</div>'
-      +(CONTA_DB.tipos||[]).map(t=>{
+    const verConf=canSeeConfid();
+    let tipos=(CONTA_DB.tipos||[]).filter(t=>verConf||!t.confidencial);
+    html='<div style="font-size:12px;color:var(--muted);margin:2px 0 12px">Cada auxiliar de Tango con todas sus opciones. Tocá para desplegar y usá el buscador de cada uno.'+(verConf?' Podés marcar un auxiliar como confidencial (solo lo ven usuarios habilitados).':'')+'</div>'
+      +tipos.map(t=>{
         const opts=(CONTA_DB.auxopc&&CONTA_DB.auxopc[t.cod])||[];
         const open=(AUX_OPEN===t.cod);
         return '<div class="card" style="margin-bottom:10px">'
-          +'<div class="card-h" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="setAuxOpen(\''+esc(t.cod)+'\')"><h3 style="margin:0;font-size:15px">'+esc(t.cod)+' · '+esc(t.desc)+'</h3><span class="meta">'+opts.length+' opciones</span><span style="margin-left:auto;color:var(--muted)">'+(open?'▲':'▼')+'</span></div>'
+          +'<div class="card-h" style="display:flex;align-items:center;gap:10px"><h3 style="margin:0;font-size:15px;cursor:pointer" onclick="setAuxOpen(\''+esc(t.cod)+'\')">'+esc(t.cod)+' · '+esc(t.desc)+(t.confidencial?' <span class="badge b-ambar">confid.</span>':'')+'</h3><span class="meta">'+opts.length+' opciones</span>'
+          +(verConf?'<label style="margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" '+(t.confidencial?'checked':'')+' onclick="toggleConfidAux(\''+esc(t.cod)+'\')">confidencial</label>':'')
+          +'<span style="'+(verConf?'':'margin-left:auto;')+'color:var(--muted);cursor:pointer" onclick="setAuxOpen(\''+esc(t.cod)+'\')">'+(open?'▲':'▼')+'</span></div>'
           +(open?('<div style="padding:0 4px 10px"><input placeholder="Buscar en '+esc(t.desc)+'…" id="auxq_'+esc(t.cod)+'" oninput="auxFilter(\''+esc(t.cod)+'\')" style="width:100%;margin-bottom:8px" autocomplete="off"><div class="dic-scroll" id="auxlist_'+esc(t.cod)+'" style="max-height:42vh">'+auxRows(opts)+'</div></div>'):'')
           +'</div>';
       }).join('');
@@ -2791,6 +2799,25 @@ function auxFilter(code){
   box.innerHTML=auxRows(f);
 }
 window.auxFilter=auxFilter;
+function canSeeConfid(){ return !!(typeof ROLE!=='undefined' && (ROLE.confidencial||ROLE.admin)); }
+async function toggleConfidCuenta(cod){
+  const r=(CONTA_DB.cuentas||[]).find(x=>String(x.cod)===String(cod)); if(!r) return;
+  const nv=!r.confidencial; r.confidencial=nv;
+  if(!DEMO_MODE){ try{ await sbFetch('/cuentas_contables?cod=eq.'+encodeURIComponent(cod),{method:'PATCH',body:JSON.stringify({confidencial:nv})}); }catch(e){ toast('No se pudo guardar: '+(e.message||e)); } }
+  paintDic();
+}
+window.toggleConfidCuenta=toggleConfidCuenta;
+async function toggleConfidAux(cod){
+  const t=(CONTA_DB.tipos||[]).find(x=>String(x.cod)===String(cod)); if(!t) return;
+  const nv=!t.confidencial; t.confidencial=nv;
+  (CONTA_DB.auxopc[cod]||[]).forEach(o=>o.confidencial=nv);
+  if(!DEMO_MODE){ try{
+    await sbFetch('/aux_tipos?cod=eq.'+encodeURIComponent(cod),{method:'PATCH',body:JSON.stringify({confidencial:nv})});
+    await sbFetch('/aux_opciones?tipo_cod=eq.'+encodeURIComponent(cod),{method:'PATCH',body:JSON.stringify({confidencial:nv})});
+  }catch(e){ toast('No se pudo guardar: '+(e.message||e)); } }
+  paintDic();
+}
+window.toggleConfidAux=toggleConfidAux;
 function toggleDicAdmin(){ DIC_ADMIN=true; paintDic(); }
 function dicUserView(){ DIC_ADMIN=false; paintDic(); }
 window.toggleDicAdmin=toggleDicAdmin; window.dicUserView=dicUserView;
@@ -2867,6 +2894,17 @@ async function reloadDB(){
       const arts = await sbFetchAll('/articulos?select=codigo,descripcion,desc_adicional,sinonimo,cuenta_cod,cuenta&order=codigo.asc');
       if(arts && arts.length) DIC.articulos = arts.map(a=>({codigo:a.codigo, descripcion:a.descripcion||'', desc_adicional:a.desc_adicional||'', sinonimo:a.sinonimo||'', cuenta_cod:a.cuenta_cod||'', cuenta:a.cuenta||''}));
     }catch(e){ /* queda el ejemplo embebido */ }
+    // Contabilidad (cuentas + auxiliares): RLS en Supabase oculta lo confidencial a quien no tiene permiso
+    try{
+      const cu=await sbFetchAll('/cuentas_contables?select=cod,descripcion,clase,tipo,saldo,usa_aux,habil,confidencial&order=cod.asc');
+      if(cu&&cu.length) CONTA_DB.cuentas=cu.map(r=>({cod:r.cod,desc:r.descripcion||'',clase:r.clase||'',tipo:r.tipo||'',saldo:r.saldo||'',usa_aux:r.usa_aux||'',habil:r.habil||'',confidencial:!!r.confidencial}));
+    }catch(e){}
+    try{
+      const tp=await sbFetch('/aux_tipos?select=cod,descripcion,confidencial&order=cod.asc');
+      if(tp&&tp.length) CONTA_DB.tipos=tp.map(t=>({cod:t.cod,desc:t.descripcion||'',confidencial:!!t.confidencial}));
+      const op=await sbFetchAll('/aux_opciones?select=tipo_cod,cod,descripcion,habil,confidencial&order=tipo_cod.asc');
+      if(op&&op.length){ const m={}; op.forEach(o=>{ (m[o.tipo_cod]=m[o.tipo_cod]||[]).push({cod:o.cod,desc:o.descripcion||'',habil:o.habil||'',confidencial:!!o.confidencial}); }); CONTA_DB.auxopc=m; }
+    }catch(e){}
   }catch(e){ toast('No se pudieron cargar los datos desde la nube.'); }
 }
 window.reloadDB=reloadDB;
