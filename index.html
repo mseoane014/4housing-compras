@@ -64,9 +64,6 @@ a{color:var(--olive-deep);}
 .kpi-value{font-size:30px;font-weight:700;line-height:1;margin:8px 0 6px;}
 .kpi-sub{font-size:11.5px;color:var(--muted);line-height:1.35;}
 .kpi .ok{color:#4f8a53;} .kpi .bad{color:#b0584f;}
-.kpi.clickable{cursor:pointer;transition:box-shadow .15s,border-color .15s;}
-.kpi.clickable:hover{border-color:var(--olive);box-shadow:0 0 0 2px rgba(157,185,139,.3);}
-.kpi.clickable.active{border-color:var(--olive-deep);box-shadow:0 0 0 2px var(--olive-deep) inset;background:var(--cream);}
 
 /* ===== CARD + TABLA ===== */
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
@@ -224,6 +221,14 @@ table.grid.usub td,table.grid.usub th{padding:6px 11px;font-size:11.5px;}
 .detail-wrap{padding:11px 16px 12px 44px;}
 .modal{max-width:560px;}
 .modal.wide{max-width:820px;}
+.modal.xwide{max-width:1400px;width:96vw;}
+.modal.xwide .field label{font-size:11px;}
+.modal.xwide input,.modal.xwide select,.modal.xwide textarea{font-size:13px;padding:8px 9px;}
+.modal.xwide .og-items-tbl th{font-size:10px;}
+.modal.xwide .og-items-tbl input,.modal.xwide .og-items-tbl select{font-size:12px;padding:4px 6px;}
+.dic-scroll{max-height:62vh;overflow:auto;border-radius:8px;}
+.dic-scroll table{margin:0;}
+.dic-scroll thead th{position:sticky;top:0;background:#efece1;z-index:3;box-shadow:0 1px 0 var(--line);}
 .modal-b{padding:18px;}
 .mcell{width:20px;height:20px;}
 .mstrip-lbl span{width:20px;}
@@ -303,7 +308,7 @@ function openModal(title,body,foot,size){
   document.getElementById('modalTitle').textContent=title;
   document.getElementById('modalBody').innerHTML=body;
   document.getElementById('modalFoot').innerHTML=foot||'';
-  const m=document.querySelector('#modalBg .modal'); if(m) m.classList.toggle('wide', size==='wide');
+  const m=document.querySelector('#modalBg .modal'); if(m){ m.classList.toggle('wide', size==='wide'); m.classList.toggle('xwide', size==='xwide'); }
   document.getElementById('modalBg').classList.add('open');
 }
 function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
@@ -1638,7 +1643,7 @@ const CLASIF_RENGLON=[{"codigo": "ESTRUC", "desc": "ESTRUCTURA"}, {"codigo": "PR
 const COSTEO_OPC=["ABERTURAS", "ACERO / HIERRO", "AISLACION / REV", "CERTIFICACION", "CLIMATIZACION", "COCINA", "CONSUMIBLES", "DESVIO", "EQUIPAMIENTO", "EST MODULAR", "ESTRUCTURA", "GC AISLACION", "GC AMOBLAMIENTO", "GC AREN Y PINTU", "GC ARENADO  Y PINTURA", "GC ART SANITARIOS", "GC ART. ILUMINA", "GC ART. ILUMINACION", "GC ASERRADERO", "GC CARPINTERIA", "GC CHAPA", "GC CORRALON", "GC ELECTRODOMES", "GC EQUIPAMIENTO", "GC ESTR MODULAR", "GC ESTRUCT MODULAR", "GC HERRAJES", "GC HERRERIA", "GC HIERROS", "GC HONORARIOS", "GC INS ELECTRIC", "GC INS GAS", "GC INS SANITARI", "GC INS TERMOMEC", "GC INST ELECTRICA", "GC INST GAS", "GC INST SANITARIA", "GC INST TERMOMECANICA", "GC LOGISTICA", "GC MONTAJE", "GC OBRA CIVIL", "GC OBRA SECA", "GC PANELES", "GC PISO", "GC POSVENTA", "GC REVESTIMIENT", "GC REVESTIMIENTO", "GC SANITARIOS", "GC SERVICIOS", "GC VIDRIO Y ESP", "GC VIDRIOS Y ESPEJOS", "INFRAESTRUCTURA", "LOGIST PERSONAL", "LOGISTICA", "LOGISTICA INTER", "MO EQUIPAMIENTO", "MO INST ELECTRI", "MO OBRA CIVIL", "MO REVESTIMIENT", "MONTAJE", "PINTURA", "POLIZA SEGURO", "POST VENTA", "SANITARIO"];
 const ESTRUCTURA_OPC=["ACOPIO", "ALQ CONT 3ROS", "ALQUILERES", "BIENES DE USO", "COTO", "ENERG ELECT", "FOOD&BEV", "GASOIL", "GASTOS DTM", "GC MANTENIMIENT", "GS LIMPIEZA", "GS VAR OFICINA", "GS VAR TALLER", "GTO COMERCIAL", "GTO PUBLICIDAD", "GTOS BANCARIOS", "GTOS MANT MODUL", "GTOS MANT REEFE", "GTOS TRANSP ALQ", "HERRAMIENTAS", "HONOR CONTABLES", "HONOR ESCRIBANO", "HONOR LEGALES", "HONOR OTROS", "INVERSION", "LIBRERIA", "LICENCIAS", "MANTEN BS USO", "MEDIC LAB PREP", "MENSAJERIA", "MOVILIDAD COMBU", "MUEBLES Y UTILE", "PATENTES", "PEAJES", "PROVEEDORES", "RECOL RESIDUOS", "REMISES", "RODADOS", "RRHH", "SEGURIDAD ALARM", "SEGUROS", "SISTEMAS", "STOCK NQN", "TELEFONO"];
 const POSTVENTA_OPC=["ABERTURAS", "ACERO / HIERRO", "AISLACION / REV", "CLIMATIZACION", "CUBIERTA", "DESVIO", "ELECTRICIDAD", "EQUIPAMIENTO", "ESTRUCTURA", "HERRERIA", "INST ELECTRICA", "LOGIST PERSONAL", "LOGISTICA", "MAT OBRA CIVIL", "MO INST CLIMATI", "MO INST ELECTRI", "MO REVESTIMIENT", "MONTAJE", "PINTURA", "PISO", "POST VENTA", "SANITARIO"];
-const CONDICION_OPC=["CHEQUE 0 DIAS", "CHEQUE 0 Y 15 DIAS", "CHEQUE 0 Y 30 DIAS", "CHEQUE 0 Y 7 DIAS", "CHEQUE 0, 15, 30 Y 60 DIAS", "CHEQUE 0, 30, 60 Y 90 DIAS", "CHEQUE 0, 7 Y 15 DIAS", "CHEQUE 15 DIAS", "CHEQUE 15 Y 30 DIAS", "CHEQUE 15, 30, 45 Y 60 DIAS", "CHEQUE 30 DIAS", "CHEQUE 30 Y 45 DIAS", "CHEQUE 30 Y 60 DIAS", "CHEQUE 30, 45 Y 60 DIAS", "CHEQUE 45 DIAS", "CHEQUE 60 DIAS", "CHEQUE 7 DIAS", "CHEQUE 7, 15 Y 30 DIAS", "CON ANTICIPO", "CONTADO REAL", "TARJETA DE CREDITO", "TRANSFERENCIA 0 DIAS", "TRANSFERENCIA 15 DIAS", "TRANSFERENCIA 30 DIAS", "TRANSFERENCIA 60 DIAS", "TRANSFERENCIA 7 DIAS", "VER OBSERVACIONES"];
+const CONDICION_OPC=["CON ANTICIPO", "CONTADO ARS", "CONTADO USD", "TRANSFERENCIA", "VER OBSERVACIONES"];
 const DESVIO_OPC=["Atraso que afecta obra", "Decision comercial", "Error computo costeo", "Error especificación técnica", "Error unidad de medida", "Material dañado", "No presupuestado", "Otros"];
 const MONEDA_OPC=["Corriente","Extranjera"];
 const MODULOS_OPC=["A00001 - GENERICO MODULO", "A00002 - GENERICO REEFER", "A00003 - STOCK BS AS", "A00004 - STOCK NQN", "A00005 - NO APLICA", "A00006 - MODULOS DE 3ROS", "A00007 - IF4346 RE BUILDING TRAILERS", "M00001 - AMBU 200804-1", "M00002 - AMFU 845146-8", "M00003 - AMFU 848078-5", "M00004 - AMFU 849125-0", "M00005 - AMFU 850929-8", "M00006 - AMFU 852102-0", "M00007 - AMFU 884514-2", "M00008 - AMFU 885809-4", "M00009 - AMFU 889877-5", "M00010 - AMZU 838073-9", "M00011 - AWSU 494620-1", "M00012 - CBHU 146645-9", "M00013 - CLHU 442667-6", "M00014 - CLHU 828379-0", "M00015 - CLHU 834894-6", "M00016 - CLHU 859573-5", "M00017 - CLHU 869604-7", "M00018 - CLHU 875113-9", "M00019 - CLHU 340475-4", "M00020 - CLHU812930-0", "M00021 - CLPU 341432-8", "M00022 - CLPU 341576-7", "M00023 - CLPU 350111-9", "M00024 - CMCU 552873-7", "M00025 - CMCU 553481-1", "M00026 - CRXU 174134-6", "M00027 - CSVU 209922-0", "M00028 - DFSU 600893-3", "M00029 - DVRU 134882-1", "M00030 - EMCU 108083-6", "M00031 - EMCU 237708-0", "M00032 - EMCU 247309-9", "M00033 - EMCU 919510-6", "M00034 - FBLU 411323-0", "M00035 - FSCU 402701-4", "M00036 - FSCU 561616-9", "M00037 - FSCU 562329-7", "M00038 - FSCU 644044-9", "M00039 - GATU 060957-3", "M00040 - GATU 076860-0", "M00041 - GATU 804726-1", "M00042 - GSTU 464773-1", "M00043 - GSTU 718552-9", "M00044 - GVCU 510828-0", "M00045 - GVCU 510883-9", "M00046 - GVCU 511941-1", "M00047 - GVCU 521289-0", "M00048 - GVCU 537884-0", "M00049 - HJCU 801916-0", "M00050 - HJCU 812283-6", "M00051 - IF 00000-40", "M00052 - IF 00000-41", "M00053 - IF 00000-42", "M00054 - IF 00000-43", "M00055 - IF 02307-0", "M00056 - IF 02996-1", "M00057 - IF 03003-0", "M00058 - IF 03004-1", "M00059 - IF 03004-5", "M00060 - IF 03061-2", "M00061 - IF 16140-1", "M00062 - INKU 250829-2", "M00063 - INKU 255832-8", "M00064 - INKU 258118-5", "M00065 - ITLU 674480-1", "M00066 - ITLU 821192-1", "M00067 - KLFU 137555-4", "M00068 - LTIU 800345-3", "M00069 - MMMU 410379-0", "M00070 - MSCU 237012-4", "M00071 - MSCU 284871-7", "M00072 - MSCU 329179-7", "M00073 - NEXU 953865-0", "M00074 - NEXU 953981-0", "M00075 - NEXU 954409-8", "M00076 - NOSU 441600-3", "M00077 - NSSC 824416-4", "M00078 - OCCU 40051-5", "M00079 - PCIU 378956-7", "M00080 - PCIU 391655-3", "M00081 - POCU 020418-2", "M00082 - PROTOTIPO", "M00083 - RODA", "M00084 - SARU 001465-1", "M00085 - SUDU 400485-2", "M00086 - SUDU 475050-6", "M00087 - SUDU 475297-8", "M00088 - SUDU 475619-2", "M00089 - SUDU 475716-2", "M00090 - TCKU 934530-2", "M00091 - TCKU 982419-9", "M00092 - TCNU 911341-0", "M00093 - TEXU 204930-7", "M00094 - TEXU 216368-6", "M00095 - TEXU 461265-7", "M00096 - TEXU 484852-9", "M00097 - TEXU 536270-0", "M00098 - TEXU 545777-1", "M00099 - TEXU 556166-2", "M00100 - TEXU 557039-2", "M00101 - TEXU 711037-5", "M00102 - TGHU 419659-0", "M00103 - TGHU 723264-3", "M00104 - TGHU 743569-8", "M00105 - TGHU 747181-7", "M00106 - TGHU 749069-5", "M00107 - TGHU 749671-2", "M00108 - TGHU 755237-5", "M00109 - TGHU 769357-9", "M00110 - TGHU 771934-9", "M00111 - TGHU 948005-8", "M00112 - TGHU 948136-8", "M00113 - TPHU 818736-2", "M00114 - TRIU 596103-0", "M00115 - TRIU 845278-2", "M00116 - TRLU 177537-1", "M00117 - TRLU 196515-5", "M00118 - TRLU 556170-0", "M00119 - TRLU 176809-5", "M00120 - TTNU 321869-5", "M00121 - TTNU 344858-0", "M00122 - TTNU 384524-7", "M00123 - TTNU 477512-3", "M00124 - TTNU 520299-6", "M00125 - TTNU 902965-7", "M00126 - TTNU 943314-4", "M00127 - UESU 470272-3", "M00128 - UESU 501696-5", "M00129 - UESU 517352-1", "M00130 - UETU 500557-9", "M00131 - UETU 500691-3", "M00132 - UGMU 863798-9", "M00133 - WFHU 130895-4", "M00134 - XINU 824048-3", "M00135 - XINU 824054-4", "M00136 - XINU 824097-1", "M00137 - XINU 824110-8", "M00138 - AMFU 890167-3", "M00141 - TRHU 141133-0", "M00142 - TRHU 207304-7", "M00143 - TRHU 184412-9", "M00144 - TRHU 151702-3", "M00145 - TRHU 207226-7", "M00146 - TRHU 207287-9", "M00147 - FT 22114-3", "M00148 - UNDU 101771-0", "M00149 - UNDU 203044-5", "M00151 - IF 04252-1", "M00152 - IF 04252-2", "M00153 - IF 04252-3", "M00154 - IF 04252-4", "M00155 - IF 04252-5", "M00156 - IF 04252-6", "M00157 - IF 04252-7", "M00158 - IF 04252-8", "M00159 - IF 04252-9", "M00160 - IF 04252-10", "M00161 - IF 04252-11", "M00162 - IF 04252-12", "M00163 - IF 04252-13", "M00164 - IF 04252-14", "M00165 - IF 04252-15", "M00166 - IF 04252-16", "M00167 - MNBU 011045-0", "M00168 - WSCU 602190-1", "M00169 - PONU 059786-4", "M00170 - EISU 912965-8", "MODULO - GENERICO MODULO", "NA - NO APLICA", "P00001 - AMFU887623-0", "P00002 - CLHU 406068-0", "P00003 - GLDU 771502-8", "P00004 - GSTU 722789-8", "P00005 - GSTU 968936-5", "P00006 - HKX 000220-0", "P00007 - ICSU 700422-5", "P00008 - IEAU 282811-1", "P00009 - INKU 254076-1", "P00010 - INKU 256089-7", "P00011 - INKU 256944-6", "P00012 - INKU251793-0", "P00013 - ITLU 557307-3", "P00014 - KKFU 701287-1", "P00015 - MLCU 2957588-1", "P00016 - MLCU 2957588-2", "P00017 - MLCU 2957588-3", "P00018 - TGHU 419140-6", "P00019 - TGHU 424684-9", "P00020 - NYKU 360511-8", "P00021 - NYKU 358510-9", "P00022 - NYKU 355565-5", "P00023 - CAIU 271739-5", "P00024 - CAIU 302295-7", "P00025 - CAIU 307304-4", "P00026 - DFSU 680419-1", "P00027 - DFSU 665127-7", "R00001 - CMCU 520124-0", "R00002 - CMCU 520233-4", "R00003 - CMCU 553408-8", "R00004 - CRLU 110562-4", "R00005 - CRLU 516922-6", "R00006 - CRLU 517162-4", "R00007 - CRLU 517322-6", "R00008 - CRLU 517439-3", "R00009 - FSCU 560197-6", "R00010 - FSCU 560476-4", "R00011 - FSCU 561678-6", "R00012 - FSCU 561794-6", "R00013 - FSCU 562088-9", "R00014 - FSCU 562136-0", "R00015 - FSCU 591997-5", "R00016 - HLXU 475603-0", "R00017 - KRJU 740009-5", "R00018 - KRJU 740026-4", "R00019 - KRJU 740042-8", "R00020 - SCXU 492781-3", "R00021 - SUDU 100133-5", "R00022 - SUDU 100215-7", "R00023 - SUDU 100223-9", "R00024 - SUDU 100307-1", "R00025 - SUDU 100359-6", "R00026 - SUDU 475063-5", "R00027 - SUDU 475084-6", "R00028 - SUDU 475098-0", "R00029 - SUDU 475207-3", "R00030 - SUDU 475225-8", "R00031 - SUDU 475258-2", "R00032 - SUDU 475293-6", "R00033 - SUDU 475294-1", "R00034 - SUDU 475315-1", "R00035 - SUDU 475328-0", "R00036 - SUDU 475338-3", "R00037 - SUDU 475354-7", "R00038 - SUDU 475385-0", "R00039 - SUDU 475406-0", "R00040 - SUDU 475417-9", "R00041 - SUDU 475456-4", "R00042 - SUDU 475459-0", "R00043 - SUDU 475587-4", "R00044 - SUDU 475651-0", "R00045 - SUDU 475675-7", "R00046 - SUDU 475694-7", "R00047 - SUDU 475705-4", "R00048 - SUDU 475712-0", "R00049 - SUDU 477266-0", "R00050 - SUDU 477340-9", "R00051 - SUDU 477377-5", "R00052 - TOLU 780207-8", "R00053 - TOLU 780208-3", "R00054 - TRIU 870913-0", "R00055 - TRLU 177425-1", "R00056 - TRLU 179018-6", "R00057 - TRLU 183160-2", "R00058 - TRLU 195790-4", "R00059 - TRLU 196440-0", "R00060 - TRLU 196821-5", "R00061 - TRLU 177605-9", "R00062 - SUDU 475659-3", "R00063 - APRU 509146-3", "R00064 - CCLU 859085-7", "R00065 - CCLU 859664-4", "R00066 - CCLU 860036-4", "R00067 - CCLU 860494-5", "R00068 - CGMU 496309-0", "R00069 - CGMU 496644-3", "R00070 - CMCU 552873-7", "R00071 - CCLU 859016-3", "R00072 - CCLU 861801-8", "R00073 - CCLU 860139-7", "R00074 - CCLU 861134-4", "R00075 - CCLU 859634-6", "R00076 - GESU 934278-1", "R00077 - APRU 508913-1", "R00078 - CCLU 861137-4", "R00079 - CCLU 859141-0", "R00080 - GESU 943030-5", "R00081 - CCLU 859877-6", "R00082 - CMCU 555204-0", "R00083 - MWCU 667899-0", "R00084 - CCLU 859721-3", "R00085 - CCLU 859485-2", "R00086 - CRLU 726949-8", "R00087 - SUDU 622958-6", "R00088 - MWCU 667906-5", "R00089 - MNBU 011835-8", "R00090 - TTNU 848144-6", "R00091 - MORU 581522-0", "R00092 - MNBU 011045-0", "R00093 - ZCSU 511065-4", "R00094 - ZCSU 585058-4", "R00095 - SZLU 909824-6", "R00096 - SZLU 911758-3", "R00097 - CXRU 118045-3", "R00098 - CXRU 118055-6", "R00099 - CRLU 310947-0", "S00001 - IF 04185-16", "S00002 - IF 04185-4", "S00003 - IF 04185-1", "V00001 - PL0050 CALLAO", "V00002 - PL0072 MELIQUINA", "V00003 - PL0075 ROCAS NEGRAS"];
@@ -1669,7 +1674,17 @@ function ogPagadoPct(og){ return Math.min(100, pagosOf(og.id).reduce((a,p)=>a+(+
 function ogPagado(og){ return ogTotal(og)*ogPagadoPct(og)/100; }
 function ogMonedaCode(og){ return og.moneda==='Extranjera' ? 'USD' : 'ARS'; }
 function ogLiberadoPct(og){ const t=ogTotal(og); return t? ogLiberado(og)/t*100 : 0; }
-function ogPendPagoPct(og){ return Math.max(0, ogLiberadoPct(og)-ogPagadoPct(og)); }
+/* Anticipo y tope pagable */
+function ogAnticipoMonto(og){ if(og.condicion!=='CON ANTICIPO') return 0; return ogTotal(og)*((+og.anticipo_pct||0)/100); }
+function ogMaxPagable(og){
+  const cert=ogLiberado(og);                 // certificado y liberado (monto)
+  if(og.condicion!=='CON ANTICIPO') return cert;   // solo lo certificado
+  const ant=ogAnticipoMonto(og); const antPct=(+og.anticipo_pct||0)/100;
+  if(og.anticipo_metodo==='B') return Math.max(ant, cert);   // recupera el anticipo primero
+  return ant + cert*(1-antPct);                              // A: proporcional
+}
+function ogMaxPagablePct(og){ const t=ogTotal(og); return t? Math.min(100, ogMaxPagable(og)/t*100) : 0; }
+function ogPendPagoPct(og){ return Math.max(0, ogMaxPagablePct(og)-ogPagadoPct(og)); }
 const CAJAS={ARS:{cod:'11110071',nombre:'CAJA PESOS 2'}, USD:{cod:'11110073',nombre:'CAJA DOLARES 3'}};
 function cajaMovs(mon){ return (mem.pagos||[]).filter(p=>p.moneda_pago===mon); }
 function cajaSaldo(mon){ const ini=(mem.caja&&mem.caja[mon+'_ini'])||0; return ini - cajaMovs(mon).reduce((a,p)=>a+(+p.importe_pago||0),0); }
@@ -1756,28 +1771,22 @@ async function renderCompras(){
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
-  else if(OG_FILTRO.estado==='certificadas') ogs=ogs.filter(o=>ogAcumPct(o.id)>=99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
   else if(OG_FILTRO.estado==='pagadas') ogs=ogs.filter(o=>ogPagado(o)>0.005 && (ogLiberado(o)-ogPagado(o))<=0.005);
 
   let comprometido=0, certificado=0, liberado=0, pagado=0;
   ogs.forEach(o=>{ comprometido+=ogTotal(o); certificado+=ogAcumMonto(o); liberado+=ogLiberado(o); pagado+=ogPagado(o); });
   const aPagar=liberado-pagado;
-  const K=(l,v,s,t,filtroVal)=>{
-    const activa = filtroVal!==undefined && OG_FILTRO.estado===filtroVal;
-    const cls='kpi'+(filtroVal!==undefined?' clickable':'')+(activa?' active':'');
-    const click=filtroVal!==undefined?' onclick="setOGFiltro(\'estado\',\''+(activa?'todas':filtroVal)+'\')" title="Click para filtrar la tabla por este estado"':'';
-    return '<div class="'+cls+'"'+click+'><div class="kpi-label">'+l+'</div><div class="kpi-value '+(t||'')+'">'+v+'</div><div class="kpi-sub">'+esc(s||'')+'</div></div>';
-  };
-  const kpis=K('Comprometido', fmtMoney(comprometido),'Suma de OGs',null,'todas')
-    +K('Certificado', fmtMoney(certificado),'Avance acumulado',null,'certificadas')
-    +K('Liberado a pagar', fmtMoney(aPagar),'Aprobado y sin pagar', aPagar>0?'bad':'ok','a_pagar')
-    +K('Pagado', fmtMoney(pagado),'Ya abonado por tesorería','ok','pagadas');
+  const K=(l,v,s,t)=>'<div class="kpi"><div class="kpi-label">'+l+'</div><div class="kpi-value '+(t||'')+'">'+v+'</div><div class="kpi-sub">'+esc(s||'')+'</div></div>';
+  const kpis=K('Comprometido', fmtMoney(comprometido),'Suma de OGs')
+    +K('Certificado', fmtMoney(certificado),'Avance acumulado')
+    +K('Liberado a pagar', fmtMoney(aPagar),'Aprobado y sin pagar', aPagar>0?'bad':'ok')
+    +K('Pagado', fmtMoney(pagado),'Ya abonado por tesorería','ok');
 
   // barra de filtros
   const compradores=[...new Set(ogsAll.map(o=>o.comprador).filter(Boolean))].sort();
   const certifs=[...new Set(ogsAll.map(o=>o.certificador).filter(Boolean))].sort();
-  const selEstado=[['todas','Todas'],['por_certificar','Por certificar'],['certificadas','Certificadas'],['a_pagar','Liberadas a pagar (tesorería)'],['pagadas','Pagadas']]
+  const selEstado=[['todas','Todas'],['por_certificar','Por certificar'],['a_pagar','Liberadas a pagar (tesorería)'],['pagadas','Pagadas']]
     .map(x=>'<option value="'+x[0]+'"'+(OG_FILTRO.estado===x[0]?' selected':'')+'>'+x[1]+'</option>').join('');
   const selComp='<option value="">Comprador: todos</option>'+compradores.map(n=>'<option'+(OG_FILTRO.comprador===n?' selected':'')+'>'+esc(n)+'</option>').join('');
   const selCert='<option value="">Certifica: todos</option>'+certifs.map(n=>'<option'+(OG_FILTRO.certificador===n?' selected':'')+'>'+esc(n)+'</option>').join('');
@@ -1800,7 +1809,7 @@ async function renderCompras(){
       const roles=(o.comprador||o.certificador)?'<div style="font-size:11px;color:var(--muted)">'+(o.comprador?'compra: '+esc(o.comprador):'')+(o.comprador&&o.certificador?' · ':'')+(o.certificador?'certifica: '+esc(o.certificador):'')+'</div>':'';
       const head='<tr class="og-head">'
         +'<td><button class="iconbtn" title="Ver detalle" onclick="toggleOG('+o.id+')" style="margin-right:4px">'+(exp?'▾':'▸')+'</button><strong>'+esc(o.numero||'—')+'</strong>'+(o.proveedor?'<div style="font-size:11px;color:var(--muted)">'+(o.proveedor_cod?esc(o.proveedor_cod)+' · ':'')+esc(o.proveedor)+'</div>':'')+roles+'</td>'
-        +'<td style="color:var(--muted)">'+esc(o.objeto||'')+'</td>'
+        +'<td style="color:var(--muted)">'+(o.clasif_og?('<strong>'+esc(o.clasif_og)+'</strong>'+(clasifDesc(o.clasif_og)&&clasifDesc(o.clasif_og)!==o.clasif_og?' · '+esc(clasifDesc(o.clasif_og)):'')):esc(o.objeto||''))+'</td>'
         +'<td style="font-size:12px;color:var(--muted)">'+(nItems?nItems+' renglón'+(nItems>1?'es':''):'—')+(nCert?' · '+nCert+' cert.':'')+'</td>'
         +'<td><strong>'+fmtMoney(ogTotal(o))+'</strong></td>'
         +'<td style="min-width:110px">'+pbar(ogAcumPct(o.id))+'</td>'
@@ -1811,7 +1820,7 @@ async function renderCompras(){
         +'</div></td></tr>';
       return head+(exp?ogDetail(o):'');
     }).join('');
-    body='<table class="grid og-grid"><thead><tr><th>OG</th><th>Objeto</th><th>Detalle</th><th>Total</th><th>Avance</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+tr+'</tbody></table>';
+    body='<table class="grid og-grid"><thead><tr><th>OG</th><th>Clasificación</th><th>Detalle</th><th>Total</th><th>Avance</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+tr+'</tbody></table>';
   }
   const demoTag=DEMO_MODE?'<span class="demo-tag">DATOS DE EJEMPLO</span>':'';
   const usdTxt = USD_VENTA ? ' · USD venta $'+USD_VENTA+(USD_FECHA?' ('+USD_FECHA.split('-').reverse().join('/')+')':'') : ' · USD: cargá conexión';
@@ -1983,7 +1992,6 @@ function ogsFiltradas(){
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
-  else if(OG_FILTRO.estado==='certificadas') ogs=ogs.filter(o=>ogAcumPct(o.id)>=99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
   else if(OG_FILTRO.estado==='pagadas') ogs=ogs.filter(o=>ogPagado(o)>0.005 && (ogLiberado(o)-ogPagado(o))<=0.005);
   return ogs;
@@ -2032,7 +2040,7 @@ function colaView(cola){
     const pagadoPct=ogPagadoPct(o);
     return '<tr>'
       +'<td><strong>'+esc(o.numero)+'</strong><div style="font-size:11px;color:var(--muted)">'+esc(o.proveedor||'')+'</div></td>'
-      +'<td>'+esc(o.objeto||'')+'</td>'
+      +'<td>'+(o.clasif_og?esc(o.clasif_og):esc(o.objeto||''))+'</td>'
       +'<td>'+badge(mon==='USD'?'USD':'Pesos')+'</td>'
       +'<td>'+ogLiberadoPct(o).toFixed(0)+'% liberado'+(pagadoPct>0?'<div style="font-size:11px;color:var(--muted)">'+pagadoPct.toFixed(0)+'% pagado</div>':'')+'</td>'
       +'<td><strong>'+(mon==='USD'?'US$ '+pend.toLocaleString('es-AR',{maximumFractionDigits:2}):fmtMoney(pend))+'</strong></td>'
@@ -2042,7 +2050,7 @@ function colaView(cola){
       +'<button class="btn sm" onclick="openPago('+o.id+')">Registrar pago</button></div></td></tr>';
   }).join('');
   return '<div class="card"><div class="card-h"><h3>Cola de pagos'+demoTag+'</h3><span class="meta">Certificado y liberado por el área técnica, pendiente de pago</span><button class="btn ghost sm" style="margin-left:auto" onclick="exportAsientoTodas()">Exportar asiento</button></div>'
-    +'<table class="grid"><thead><tr><th>OG</th><th>Objeto</th><th>Moneda OG</th><th>Estado</th><th>Pendiente</th><th>Certificó</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    +'<table class="grid"><thead><tr><th>OG</th><th>Clasif.</th><th>Moneda OG</th><th>Estado</th><th>Pendiente</th><th>Certificó</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function verRespaldo(ogId){
@@ -2100,8 +2108,11 @@ function openPago(ogId){
   const o=ogById(ogId); const monOG=ogMonedaCode(o);
   const pendPct=ogPendPagoPct(o); const tot=ogTotal(o);
   const tc=USD_VENTA||'';
+  const antInfo = (o.condicion==='CON ANTICIPO')
+    ? '<br><span style="color:var(--olive-deep)">Anticipo '+(+o.anticipo_pct||0)+'% · método '+(o.anticipo_metodo||'—')+(o.anticipo_metodo==='B'?' (recupera primero)':' (proporcional)')+'</span>'
+    : '';
   const body='<div style="background:#f3f1e8;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12.5px">'
-    +'<strong>OG '+esc(o.numero)+'</strong> · '+esc(o.proveedor||'')+'<br>Total: '+(monOG==='USD'?'US$ ':'$ ')+tot.toLocaleString('es-AR')+' ('+(monOG==='USD'?'dólares':'pesos')+') · Liberado: '+ogLiberadoPct(o).toFixed(0)+'% · Ya pagado: '+ogPagadoPct(o).toFixed(0)+'% · <strong>Pendiente: '+pendPct.toFixed(0)+'%</strong></div>'
+    +'<strong>OG '+esc(o.numero)+'</strong> · '+esc(o.proveedor||'')+'<br>Total: '+(monOG==='USD'?'US$ ':'$ ')+tot.toLocaleString('es-AR')+' ('+(monOG==='USD'?'dólares':'pesos')+') · Certificado: '+ogLiberadoPct(o).toFixed(0)+'% · Ya pagado: '+ogPagadoPct(o).toFixed(0)+'% · <strong>Pagable ahora: '+pendPct.toFixed(0)+'%</strong>'+antInfo+'</div>'
     +'<div class="frow c2"><div class="field"><label>% de la OG a pagar</label><input id="pg_pct" type="number" value="'+pendPct.toFixed(0)+'" oninput="pgCalc()"><div style="font-size:11px;color:var(--muted);margin-top:3px">Máx pendiente: '+pendPct.toFixed(0)+'%</div></div>'
     +'<div class="field"><label>Fecha de pago</label><input id="pg_fecha" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div></div>'
     +'<div class="frow c2"><div class="field"><label>Moneda de pago</label><select id="pg_moneda" onchange="pgCalc()"><option value="ARS"'+(monOG==='ARS'?' selected':'')+'>Pesos (CAJA PESOS 2)</option><option value="USD"'+(monOG==='USD'?' selected':'')+'>Dólares (CAJA DOLARES 3)</option></select></div>'
@@ -2193,7 +2204,6 @@ function exportOGExcel(){
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
-  else if(OG_FILTRO.estado==='certificadas') ogs=ogs.filter(o=>ogAcumPct(o.id)>=99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
   else if(OG_FILTRO.estado==='pagadas') ogs=ogs.filter(o=>ogPagado(o)>0.005 && (ogLiberado(o)-ogPagado(o))<=0.005);
   const rows=ogReportRows(ogs);
@@ -2225,7 +2235,7 @@ function renderCertPanel(){
   box.innerHTML='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:2px 0 6px">'+list.length+' OG pendiente'+(list.length>1?'s':'')+' de certificar</div>'
     +list.map(o=>{ const rem=100-ogAcumPct(o.id);
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)">'
-        +'<div style="flex:1;min-width:0"><strong>OG '+esc(o.numero||'')+'</strong> · '+esc(o.objeto||'')
+        +'<div style="flex:1;min-width:0"><strong>OG '+esc(o.numero||'')+'</strong> · '+esc(o.clasif_og||o.objeto||'')
         +'<div style="font-size:11px;color:var(--muted)">'+(o.proveedor_cod?esc(o.proveedor_cod)+' · ':'')+esc(o.proveedor||'')+' · '+fmtMoney(ogTotal(o))+' · resta '+rem.toFixed(1).replace('.0','')+'%</div></div>'
         +'<div style="width:84px">'+pbar(ogAcumPct(o.id))+'</div>'
         +'<button class="btn sm" onclick="openCert('+o.id+')">Certificar</button></div>'; }).join('');
@@ -2250,14 +2260,21 @@ function openOG(id){
   const desvOpts=optSel(DESVIO_OPC,cur.desvio);
   const urgOpts=optSel(['No','Sí'],cur.compra_urgente);
   const hoy=new Date().toISOString().slice(0,10);
+  const clasOGVal = cur.clasif_og ? (cur.clasif_og + ((clasifDesc(cur.clasif_og)&&clasifDesc(cur.clasif_og)!==cur.clasif_og)?' — '+clasifDesc(cur.clasif_og):'')) : '';
+  const antShow = (cur.condicion==='CON ANTICIPO');
+  const metVal=cur.anticipo_metodo||'';
+  const metOpts='<option value="">— elegí —</option><option value="A"'+(metVal==='A'?' selected':'')+'>A · proporcional a lo certificado</option><option value="B"'+(metVal==='B'?' selected':'')+'>B · recupera el anticipo primero</option>';
   const body='<div class="frow c2"><div class="field"><label>N° OG</label><input id="og_numero" type="text" readonly value="'+esc(cur.numero || (DEMO_MODE?nextNum:''))+'" placeholder="Se asigna al guardar" style="background:#f3f1e8"><div style="font-size:11px;color:var(--muted);margin-top:4px">'+(cur.numero?'N° asignado.':'Se asigna solo al guardar (correlativo desde 2000).')+'</div></div>'
     +'<div class="field"><label>Fecha de creación</label><input id="og_fecha" type="date" value="'+esc(cur.fecha||hoy)+'"></div></div>'
     +'<div class="field"><label>Proveedor</label><input id="og_proveedor" value="'+esc(provVal)+'" placeholder="Escribí código o nombre…" autocomplete="off" onfocus="comboProv()" oninput="comboProv()" onblur="comboHideDelayed()"><div style="font-size:11px;color:var(--muted);margin-top:4px">Escribí código o nombre y elegí de la lista.</div></div>'
-    +'<div class="field"><label>Objeto / descripción general</label><input id="og_objeto" type="text" value="'+esc(cur.objeto||'')+'"></div>'
+    +'<div class="field"><label>Clasificación (OG)</label><input id="og_clasif" value="'+esc(clasOGVal)+'" placeholder="Escribí código o nombre…" autocomplete="off" onfocus="comboClasOG()" oninput="comboClasOG()" onblur="comboHideDelayed()"><div style="font-size:11px;color:var(--muted);margin-top:4px">Se copia por defecto a cada renglón nuevo; podés cambiarla por renglón.</div></div>'
     +'<div class="frow c2"><div class="field"><label>Comprador (crea la OG)</label><select id="og_comprador">'+compOpts+'</select></div>'
     +'<div class="field"><label>Certifica la OG</label><select id="og_certificador">'+certOpts+'</select></div></div>'
-    +'<div class="frow c2"><div class="field"><label>Condición de compra</label><select id="og_condicion">'+condOpts+'</select></div>'
+    +'<div class="frow c2"><div class="field"><label>Condición de compra</label><select id="og_condicion" onchange="ogCondChanged()">'+condOpts+'</select></div>'
     +'<div class="field"><label>Moneda</label><select id="og_moneda">'+monOpts+'</select></div></div>'
+    +'<div id="ogAnticipoBox" style="display:'+(antShow?'block':'none')+'"><div class="frow c2"><div class="field"><label>% de anticipo</label><input id="og_antpct" type="number" min="0" max="100" value="'+esc(cur.anticipo_pct!=null?cur.anticipo_pct:'')+'"></div>'
+    +'<div class="field"><label>Método de anticipo</label><select id="og_antmet">'+metOpts+'</select></div></div></div>'
+    +'<div class="field"><label>Observaciones</label><textarea id="og_obs" rows="2" style="font-size:13px;min-height:36px;line-height:1.4" placeholder="Detalle de la condición (plazos, % de anticipo, aclaraciones)…">'+esc(cur.observaciones||'')+'</textarea></div>'
     // ----- Renglones -----
     +'<div class="field"><label>Renglones (Cód Art · Artículo · Clasificación · Centro de costos)</label><div id="ogItemsBox" style="overflow-x:auto"></div>'
     +'<button class="btn ghost sm" style="margin-top:8px" onclick="addOGItem()">'+ICO.plus+'Agregar renglón</button>'
@@ -2272,10 +2289,9 @@ function openOG(id){
     +'<div class="field"><label>POSTVENTA (si es post-venta, dónde se generó)</label><select id="og_postventa">'+postOpts+'</select></div>'
     +'<div class="frow c2"><div class="field"><label>Desvío</label><select id="og_desvio">'+desvOpts+'</select></div>'
     +'<div class="field"><label>Desvío (otro, texto libre)</label><input id="og_desvio_txt" type="text" value="'+esc(cur.desvio_txt||'')+'"></div></div>'
-    +'<div class="field"><label>Alcance del trabajo</label><textarea id="og_alcance">'+esc(cur.alcance||'')+'</textarea></div>'
-    +'<div class="field"><label>Observaciones</label><textarea id="og_obs">'+esc(cur.observaciones||'')+'</textarea></div>';
+    +'<div class="field"><label>Alcance del trabajo</label><textarea id="og_alcance">'+esc(cur.alcance||'')+'</textarea></div>';
   openModal(id!=null?'Editar OG':'Nueva OG', body,
-    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveOG('+(id!=null?id:'null')+')">Guardar</button>', 'wide');
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveOG('+(id!=null?id:'null')+')">Guardar</button>', 'xwide');
   renderOGItems();
 }
 window.openOG=openOG;
@@ -2288,15 +2304,15 @@ function renderOGItems(){
   const artDL=artList.map(a=>{ let v=a.codigo+' — '+a.descripcion; if(a.sinonimo) v+=' — '+a.sinonimo; if(a.desc_adicional) v+=' — '+a.desc_adicional; return '<option value="'+esc(v)+'"></option>'; }).join('');
   const clasDL=CLASIF_RENGLON.map(c=>'<option value="'+esc(c.codigo+' — '+c.desc)+'"></option>').join('');
   const modDL=MODULOS_OPC.map(m=>'<option value="'+esc(m)+'"></option>').join('');
-  box.innerHTML='<table class="grid usub" style="font-size:11.5px"><thead><tr><th>Cód Art</th><th>Artículo</th><th>Clasificación</th><th>Módulo (hasta 5)</th><th>Cant</th><th>UM</th><th>P. unit.</th><th>Total</th><th></th></tr></thead><tbody>'
+  box.innerHTML='<table class="grid usub og-items-tbl" style="font-size:11.5px;table-layout:fixed;width:100%"><colgroup><col style="width:120px"><col style="width:22%"><col style="width:20%"><col style="width:220px"><col style="width:52px"><col style="width:64px"><col style="width:96px"><col style="width:96px"><col style="width:42px"></colgroup><thead><tr><th>Cód Art</th><th>Artículo</th><th>Clasificación</th><th>Módulo (hasta 5)</th><th>Cant</th><th>UM</th><th>P. unit.</th><th>Total</th><th></th></tr></thead><tbody>'
     +OG_ITEMS.map((it,i)=>{
       if(it._locked){
         const mds=(it.modulos||[]).map(m=>esc(String(m).split(' - ')[0])).join(', ');
         return '<tr style="background:#f3f1e8">'
-        +'<td>'+esc(it.cod_art||'')+'</td>'
-        +'<td>'+esc(it.articulo||it.descripcion||'')+'</td>'
-        +'<td>'+esc(it.centro_costos||'')+'</td>'
-        +'<td style="font-size:10.5px">'+(mds||'—')+'</td>'
+        +'<td style="overflow:hidden;text-overflow:ellipsis">'+esc(it.cod_art||'')+'</td>'
+        +'<td style="overflow:hidden;text-overflow:ellipsis">'+esc(it.articulo||it.descripcion||'')+'</td>'
+        +'<td style="overflow:hidden;text-overflow:ellipsis">'+esc(it.centro_costos||'')+'</td>'
+        +'<td style="font-size:10.5px;overflow:hidden;text-overflow:ellipsis">'+(mds||'—')+'</td>'
         +'<td>'+esc(it.cant!=null?it.cant:'')+'</td>'
         +'<td>'+esc(it.um||'')+'</td>'
         +'<td>'+esc(it.precio_unit!=null?it.precio_unit:'')+'</td>'
@@ -2304,16 +2320,16 @@ function renderOGItems(){
         +'<td><span title="Renglón certificado: no se puede editar ni eliminar" style="font-size:10px;color:var(--muted);font-weight:700">CERT.</span></td></tr>';
       }
       const mods=(it.modulos||[]).map((m,j)=>'<span style="display:inline-flex;align-items:center;gap:3px;background:#eceae1;border-radius:6px;padding:1px 5px;margin:1px;font-size:10.5px">'+esc(String(m).split(' - ')[0])+' <span onclick="ogDelModulo('+i+','+j+')" style="cursor:pointer;font-weight:700">×</span></span>').join('');
-      const modInput=(it.modulos||[]).length>=5?'<span style="font-size:10px;color:var(--muted)">máx 5</span>':'<input list="ogModDL" placeholder="+ módulo" onchange="ogAddModulo('+i+',this.value);this.value=\'\'" style="width:120px;'+inp+'">';
+      const modInput=(it.modulos||[]).length>=5?'<span style="font-size:10px;color:var(--muted)">máx 5</span>':'<input id="ogmod_'+i+'" placeholder="+ módulo" autocomplete="off" onfocus="comboMod('+i+')" oninput="comboMod('+i+')" onblur="comboHideDelayed()" style="width:100%;'+inp+'">';
       return '<tr>'
-      +'<td><input id="ogart_'+i+'" value="'+esc(it.cod_art||'')+'" placeholder="código, nombre o sinónimo…" autocomplete="off" onfocus="comboArt('+i+')" oninput="comboArt('+i+')" onblur="comboHideDelayed()" style="width:150px;'+inp+'"></td>'
-      +'<td><input type="text" value="'+esc(it.articulo||it.descripcion||'')+'" oninput="OG_ITEMS['+i+'].articulo=this.value" style="width:140px;'+inp+'"></td>'
-      +'<td><input list="ogClasDL" value="'+esc(it.centro_costos ? (it.centro_costos+((clasifDesc(it.centro_costos)&&clasifDesc(it.centro_costos)!==it.centro_costos)?' — '+clasifDesc(it.centro_costos):'')) : '')+'" placeholder="código o nombre…" onchange="ogSetClasif('+i+',this.value)" style="width:150px;'+inp+'"></td>'
-      +'<td style="min-width:150px">'+mods+' '+modInput+'</td>'
-      +'<td><input type="number" value="'+esc(it.cant!=null?it.cant:'')+'" oninput="OG_ITEMS['+i+'].cant=this.value;updateOGTotal()" style="width:44px;'+inp+'"></td>'
-      +'<td><select onchange="OG_ITEMS['+i+'].um=this.value" style="width:58px;'+inp+'">'+UM_LIST.map(u=>'<option'+(u===it.um?' selected':'')+'>'+u+'</option>').join('')+'</select></td>'
-      +'<td><input type="number" value="'+esc(it.precio_unit!=null?it.precio_unit:'')+'" oninput="OG_ITEMS['+i+'].precio_unit=this.value;updateOGTotal()" style="width:78px;'+inp+'"></td>'
-      +'<td id="ogit_'+i+'" style="white-space:nowrap">'+fmtMoney(itemTotal(it))+'</td>'
+      +'<td><input id="ogart_'+i+'" value="'+esc(it.cod_art||'')+'" placeholder="código o nombre…" autocomplete="off" onfocus="comboArt('+i+')" oninput="comboArt('+i+')" onblur="comboHideDelayed()" style="width:100%;'+inp+'"></td>'
+      +'<td><input type="text" value="'+esc(it.articulo||it.descripcion||'')+'" oninput="OG_ITEMS['+i+'].articulo=this.value" style="width:100%;'+inp+'"></td>'
+      +'<td><input id="ogclas_'+i+'" value="'+esc(it.centro_costos ? (it.centro_costos+((clasifDesc(it.centro_costos)&&clasifDesc(it.centro_costos)!==it.centro_costos)?' — '+clasifDesc(it.centro_costos):'')) : '')+'" placeholder="código o nombre…" autocomplete="off" onfocus="comboClasRen('+i+')" oninput="comboClasRen('+i+')" onblur="comboHideDelayed()" style="width:100%;'+inp+'"></td>'
+      +'<td>'+mods+' '+modInput+'</td>'
+      +'<td><input type="number" value="'+esc(it.cant!=null?it.cant:'')+'" oninput="OG_ITEMS['+i+'].cant=this.value;updateOGTotal()" style="width:100%;'+inp+'"></td>'
+      +'<td><select onchange="OG_ITEMS['+i+'].um=this.value" style="width:100%;'+inp+'">'+UM_LIST.map(u=>'<option'+(u===it.um?' selected':'')+'>'+u+'</option>').join('')+'</select></td>'
+      +'<td><input type="number" value="'+esc(it.precio_unit!=null?it.precio_unit:'')+'" oninput="OG_ITEMS['+i+'].precio_unit=this.value;updateOGTotal()" style="width:100%;'+inp+'"></td>'
+      +'<td id="ogit_'+i+'" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+fmtMoney(itemTotal(it))+'</td>'
       +'<td><button class="iconbtn del" onclick="delOGItem('+i+')">'+ICO.del+'</button></td></tr>'; }).join('')
     +'</tbody></table><datalist id="ogArtDL">'+artDL+'</datalist><datalist id="ogClasDL">'+clasDL+'</datalist><datalist id="ogModDL">'+modDL+'</datalist>';
   updateOGTotal();
@@ -2403,6 +2419,38 @@ function comboArt(i){
   comboShow(inp, items, it=>{ ogSetCodDirect(i, it.code); });
 }
 window.comboArt=comboArt;
+function comboClasOG(){
+  const inp=document.getElementById('og_clasif'); if(!inp) return;
+  const q=(inp.value||'').trim().toLowerCase();
+  const src=CLASIF_RENGLON;
+  const items=(q?src.filter(c=>((c.codigo||'')+' '+(c.desc||'')).toLowerCase().includes(q)):src).slice(0,80)
+    .map(c=>({code:c.codigo, name:c.desc||''}));
+  comboShow(inp, items, it=>{ inp.value=it.code+' — '+it.name; });
+}
+window.comboClasOG=comboClasOG;
+function comboClasRen(i){
+  const inp=document.getElementById('ogclas_'+i); if(!inp) return;
+  const q=(inp.value||'').trim().toLowerCase();
+  const src=CLASIF_RENGLON;
+  const items=(q?src.filter(c=>((c.codigo||'')+' '+(c.desc||'')).toLowerCase().includes(q)):src).slice(0,80)
+    .map(c=>({code:c.codigo, name:c.desc||''}));
+  comboShow(inp, items, it=>{ inp.value=it.code+' — '+it.name; OG_ITEMS[i].centro_costos=it.code; });
+}
+window.comboClasRen=comboClasRen;
+function comboMod(i){
+  const inp=document.getElementById('ogmod_'+i); if(!inp) return;
+  const q=(inp.value||'').trim().toLowerCase();
+  const src=MODULOS_OPC;
+  const items=(q?src.filter(m=>String(m).toLowerCase().includes(q)):src).slice(0,80)
+    .map(m=>{ const s=String(m).split(' - '); return {code:s[0], name:s.slice(1).join(' - ')||''}; });
+  comboShow(inp, items, it=>{ ogAddModulo(i, it.code+(it.name?' - '+it.name:'')); });
+}
+window.comboMod=comboMod;
+function ogCondChanged(){
+  const c=document.getElementById('og_condicion'); const box=document.getElementById('ogAnticipoBox');
+  if(box) box.style.display=(c && c.value==='CON ANTICIPO')?'block':'none';
+}
+window.ogCondChanged=ogCondChanged;
 function ogSetCodDirect(i, code){
   OG_ITEMS[i].cod_art=code;
   const a=(typeof DIC!=='undefined'?DIC.articulos:[]).find(x=>x.codigo===code);
@@ -2436,7 +2484,12 @@ function updateOGTotal(){
   const el=document.getElementById('ogTotalLine'); if(!el) return;
   el.innerHTML = OG_ITEMS.length ? 'Total OG: <strong>'+fmtMoney(OG_ITEMS.reduce((a,it)=>a+itemTotal(it),0))+'</strong>' : '';
 }
-function addOGItem(){ OG_ITEMS.push({cod_art:'',articulo:'',centro_costos:'',modulos:[],cant:1,um:'UNI',precio_unit:''}); renderOGItems(); }
+function addOGItem(){
+  const cinp=document.getElementById('og_clasif');
+  const def = cinp ? (cinp.value||'').split(' — ')[0].trim() : '';
+  OG_ITEMS.push({cod_art:'',articulo:'',centro_costos:def,modulos:[],cant:1,um:'UNI',precio_unit:''});
+  renderOGItems();
+}
 function delOGItem(i){ if(OG_ITEMS[i]&&OG_ITEMS[i]._locked){ toast('Ese renglón ya está certificado: no se puede eliminar.'); return; } OG_ITEMS.splice(i,1); renderOGItems(); }
 window.addOGItem=addOGItem; window.delOGItem=delOGItem; window.updateOGTotal=updateOGTotal;
 async function saveOG(id){
@@ -2446,8 +2499,10 @@ async function saveOG(id){
   const gv=id=>document.getElementById(id).value;
   const obj={ fecha:gv('og_fecha'),
     proveedor_cod: vv?vv.codigo:'', proveedor: vv?(vv.razon||vv.comercial):(document.getElementById('og_proveedor').value||''),
-    objeto:gv('og_objeto'),
+    clasif_og:(document.getElementById('og_clasif').value||'').split(' — ')[0].trim(),
     condicion:gv('og_condicion'), tipo_contratacion:gv('og_condicion'), moneda:gv('og_moneda'),
+    anticipo_pct:(gv('og_condicion')==='CON ANTICIPO' && document.getElementById('og_antpct') && document.getElementById('og_antpct').value!=='')?+document.getElementById('og_antpct').value:null,
+    anticipo_metodo:(gv('og_condicion')==='CON ANTICIPO' && document.getElementById('og_antmet'))?document.getElementById('og_antmet').value:null,
     comprador:gv('og_comprador'), certificador:gv('og_certificador'),
     solp:(gv('og_solp')===''?null:+gv('og_solp')), compra_urgente:gv('og_urgente'),
     costeo:gv('og_costeo'), estructura:gv('og_estructura'), postventa:gv('og_postventa'),
@@ -2639,25 +2694,25 @@ function paintDic(){
       +rows.map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td><td>'+esc(r.nombre)+'</td></tr>').join('')+'</tbody></table>');
   } else if(DIC_TAB==='proveedores'){
     let rows=DIC.proveedores; if(q) rows=rows.filter(r=>dicMatch(r,q));
-    const tbl='<table class="grid"><thead><tr><th>Código</th><th>Razón social / comercial</th><th>CUIT</th><th>Teléfono</th><th>Móvil</th><th>Email</th></tr></thead><tbody>'
+    const tbl='<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Razón social / comercial</th><th>CUIT</th><th>Teléfono</th><th>Móvil</th><th>Email</th></tr></thead><tbody>'
       +rows.slice(0,500).map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td>'
         +'<td><div style="font-size:12.5px">'+esc(r.razon||'—')+'</div>'+(r.comercial&&r.comercial!==r.razon?'<div style="font-size:11px;color:var(--muted)">'+esc(r.comercial)+'</div>':'')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.cuit||'—')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.tel||'—')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.movil||'—')+'</td>'
-        +'<td style="font-size:11.5px">'+(r.email?'<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>':'—')+'</td></tr>').join('')+'</tbody></table>'
+        +'<td style="font-size:11.5px">'+(r.email?'<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>':'—')+'</td></tr>').join('')+'</tbody></table></div>'
       +(rows.length>500?'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Mostrando 500 de '+rows.length+'. Usá el buscador para filtrar.</div>':'');
     html='<div class="card"><div class="card-h" style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Proveedores</h3><span class="meta">'+rows.length+' de '+DIC.proveedores.length+'</span>'
       +'<button class="btn sm" style="margin-left:auto" onclick="openNuevoProv()">'+ICO.plus+'Nuevo proveedor</button></div>'+tbl+'</div>';
   } else if(DIC_TAB==='articulos'){
     let rows=DIC.articulos; if(q) rows=rows.filter(r=>dicMatch(r,q));
     html=card('Artículos (compras · GC)', rows.length+' de '+DIC.articulos.length, '',
-      '<table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Descripción adicional</th><th>Sinónimo</th><th>N° cuenta</th><th>Cuenta</th></tr></thead><tbody>'
+      '<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Descripción adicional</th><th>Sinónimo</th><th>N° cuenta</th><th>Cuenta</th></tr></thead><tbody>'
       +rows.slice(0,500).map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td><td>'+esc(r.descripcion)+'</td>'
         +'<td style="font-size:11.5px;color:var(--muted)">'+esc(r.desc_adicional||'—')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.sinonimo||'—')+'</td>'
         +'<td style="font-size:11.5px;color:var(--muted)">'+esc(r.cuenta_cod||'—')+'</td>'
-        +'<td style="font-size:12px">'+esc(r.cuenta||'—')+'</td></tr>').join('')+'</tbody></table>'
+        +'<td style="font-size:12px">'+esc(r.cuenta||'—')+'</td></tr>').join('')+'</tbody></table></div>'
       +(rows.length>500?'<div style="font-size:11.5px;color:var(--muted);margin-top:8px;padding:0 15px">Mostrando 500 de '+rows.length+'. Usá el buscador para filtrar.</div>':'')
       +'<div style="font-size:11.5px;color:var(--muted);padding:10px 15px">La cuenta es la <em>por defecto</em>; puede variar según el destino (el auxiliar contable define el caso). Los códigos GC son los habilitados para compras.</div>');
   } else if(DIC_TAB==='series'){
