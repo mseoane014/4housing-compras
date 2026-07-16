@@ -628,9 +628,14 @@ async function sbFetch(path, opts={}, _retry=false){
 
 const Data = {
   async list(view){
-    if(DEMO_MODE) return (mem[view]||[]).slice();
+    if(DEMO_MODE) return (mem[view]||SCHEMAS[view].seed||[]).slice();
     const t = SCHEMAS[view].table;
-    return sbFetch('/'+t+'?select=*&order=id.desc');
+    try{ return await sbFetch('/'+t+'?select=*&order=id.desc'); }
+    catch(e){
+      const m=String(e.message||'');
+      if(m.includes('PGRST205')||m.includes('Could not find')||m.includes('404')) return (SCHEMAS[view].seed||[]).slice(); // módulo aún sin tabla: mostrar ejemplos
+      throw e;
+    }
   },
   async add(view, obj){
     if(DEMO_MODE){ const arr=mem[view]; const id=Math.max(0,...arr.map(r=>+r.id||0))+1; const row={id,...obj}; arr.unshift(row); return row; }
@@ -2257,7 +2262,7 @@ function renderOGItems(){
   if(!OG_ITEMS.length){ box.innerHTML='<div style="font-size:12.5px;color:var(--muted);padding:4px 0">Sin renglones: se certifica a nivel OG con el monto total. Agregá renglones para detallar por artículo y clasificación.</div>'; updateOGTotal(); return; }
   const inp='border:1px solid var(--line-strong);border-radius:7px;padding:5px 6px;font-size:11.5px';
   const artList=(typeof DIC!=='undefined'?DIC.articulos:[]);
-  const artDL=artList.map(a=>'<option value="'+esc(a.codigo+' — '+a.descripcion)+'"></option>').join('');
+  const artDL=artList.map(a=>{ let v=a.codigo+' — '+a.descripcion; if(a.sinonimo) v+=' — '+a.sinonimo; if(a.desc_adicional) v+=' — '+a.desc_adicional; return '<option value="'+esc(v)+'"></option>'; }).join('');
   const clasDL=CLASIF_RENGLON.map(c=>'<option value="'+esc(c.codigo+' — '+c.desc)+'"></option>').join('');
   const modDL=MODULOS_OPC.map(m=>'<option value="'+esc(m)+'"></option>').join('');
   box.innerHTML='<table class="grid usub" style="font-size:11.5px"><thead><tr><th>Cód Art</th><th>Artículo</th><th>Clasificación</th><th>Módulo (hasta 5)</th><th>Cant</th><th>UM</th><th>P. unit.</th><th>Total</th><th></th></tr></thead><tbody>'
@@ -2519,6 +2524,31 @@ function renderDic(){
 }
 function setDicTab(t){ DIC_TAB=t; DIC_SEARCH=''; renderDic(); }
 window.setDicTab=setDicTab;
+function openNuevoProv(){
+  const fld=(id,lbl,ph)=>'<div class="field"><label>'+lbl+'</label><input id="'+id+'" type="text" placeholder="'+(ph||'')+'"></div>';
+  openModal('Nuevo proveedor',
+    '<div class="frow c2">'+fld('np_cod','Código *','ej. PEPSA')+fld('np_cuit','CUIT','30-xxxxxxxx-x')+'</div>'
+    +fld('np_razon','Razón social *','Nombre completo')
+    +fld('np_com','Nombre comercial','(si difiere)')
+    +'<div class="frow c2">'+fld('np_tel','Teléfono')+fld('np_email','Email')+'</div>',
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="guardarNuevoProv()">Guardar proveedor</button>');
+}
+window.openNuevoProv=openNuevoProv;
+async function guardarNuevoProv(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const cod=g('np_cod'), razon=g('np_razon');
+  if(!cod||!razon){ toast('Código y razón social son obligatorios.'); return; }
+  if(DIC.proveedores.some(p=>p.codigo.toLowerCase()===cod.toLowerCase())){ toast('Ya existe un proveedor con ese código.'); return; }
+  const obj={ codigo:cod, razon:razon, comercial:g('np_com')||razon, cuit:g('np_cuit'), tel:g('np_tel'), movil:'', email:g('np_email'), web:'' };
+  if(!DEMO_MODE){
+    try{ await sbFetch('/proveedores',{method:'POST',body:JSON.stringify(obj)}); }
+    catch(e){ toast('No se pudo guardar: '+(e.message||e)); return; }
+  }
+  DIC.proveedores.push(obj);
+  DIC.proveedores.sort((a,b)=>a.codigo.localeCompare(b.codigo));
+  closeModal(); toast('Proveedor agregado'); renderDic();
+}
+window.guardarNuevoProv=guardarNuevoProv;
 function filterDic(v){ DIC_SEARCH=v; paintDic(); }
 window.filterDic=filterDic;
 
@@ -2536,19 +2566,26 @@ function paintDic(){
       +rows.map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td><td>'+esc(r.nombre)+'</td></tr>').join('')+'</tbody></table>');
   } else if(DIC_TAB==='proveedores'){
     let rows=DIC.proveedores; if(q) rows=rows.filter(r=>dicMatch(r,q));
-    html=card('Proveedores', rows.length+' cargados', demoTag,
+    const btn='<button class="btn sm" onclick="openNuevoProv()">'+ICO.plus+'Nuevo proveedor</button>';
+    html=card('Proveedores', rows.length+' de '+DIC.proveedores.length, btn,
       '<table class="grid"><thead><tr><th>Código</th><th>Razón social / comercial</th><th>CUIT</th><th>Teléfono</th><th>Móvil</th><th>Email</th></tr></thead><tbody>'
-      +rows.map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td>'
+      +rows.slice(0,500).map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td>'
         +'<td><div style="font-size:12.5px">'+esc(r.razon||'—')+'</div>'+(r.comercial&&r.comercial!==r.razon?'<div style="font-size:11px;color:var(--muted)">'+esc(r.comercial)+'</div>':'')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.cuit||'—')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.tel||'—')+'</td>'
         +'<td style="font-size:11.5px">'+esc(r.movil||'—')+'</td>'
-        +'<td style="font-size:11.5px">'+(r.email?'<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>':'—')+'</td></tr>').join('')+'</tbody></table>');
+        +'<td style="font-size:11.5px">'+(r.email?'<a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a>':'—')+'</td></tr>').join('')+'</tbody></table>'
+      +(rows.length>500?'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Mostrando 500 de '+rows.length+'. Usá el buscador para filtrar.</div>':''));
   } else if(DIC_TAB==='articulos'){
     let rows=DIC.articulos; if(q) rows=rows.filter(r=>dicMatch(r,q));
-    html=card('Artículos (compras · GC)', rows.length+' artículos', demoTag,
-      '<table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Cuenta contable (por defecto)</th></tr></thead><tbody>'
-      +rows.map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td><td>'+esc(r.descripcion)+'</td><td><span style="font-size:11.5px;color:var(--muted)">'+esc(r.cuenta_cod)+'</span> '+esc(r.cuenta)+'</td></tr>').join('')+'</tbody></table>'
+    html=card('Artículos (compras · GC)', rows.length+' de '+DIC.articulos.length, '',
+      '<table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Descripción adicional</th><th>Sinónimo</th><th>N° cuenta</th><th>Cuenta</th></tr></thead><tbody>'
+      +rows.slice(0,500).map(r=>'<tr><td><strong>'+esc(r.codigo)+'</strong></td><td>'+esc(r.descripcion)+'</td>'
+        +'<td style="font-size:11.5px;color:var(--muted)">'+esc(r.desc_adicional||'—')+'</td>'
+        +'<td style="font-size:11.5px">'+esc(r.sinonimo||'—')+'</td>'
+        +'<td style="font-size:11.5px;color:var(--muted)">'+esc(r.cuenta_cod||'—')+'</td>'
+        +'<td style="font-size:12px">'+esc(r.cuenta||'—')+'</td></tr>').join('')+'</tbody></table>'
+      +(rows.length>500?'<div style="font-size:11.5px;color:var(--muted);margin-top:8px;padding:0 15px">Mostrando 500 de '+rows.length+'. Usá el buscador para filtrar.</div>':'')
       +'<div style="font-size:11.5px;color:var(--muted);padding:10px 15px">La cuenta es la <em>por defecto</em>; puede variar según el destino (el auxiliar contable define el caso). Los códigos GC son los habilitados para compras.</div>');
   } else if(DIC_TAB==='series'){
     const tipos=['Todos',...[...new Set(DIC.series.map(s=>s.tipo))]];
@@ -2673,6 +2710,16 @@ async function reloadDB(){
     const cajas      = await sbFetch('/caja?select=*') || [];
     mem.caja = mem.caja || {};
     cajas.forEach(c=>{ if(c.moneda==='ARS') mem.caja.ARS_ini=+c.saldo_inicial||0; if(c.moneda==='USD') mem.caja.USD_ini=+c.saldo_inicial||0; });
+    // Proveedores: si hay lista en Supabase, reemplaza el ejemplo embebido
+    try{
+      const provs = await sbFetch('/proveedores?select=codigo,razon,comercial,cuit,tel,movil,email,web&order=codigo.asc');
+      if(provs && provs.length) DIC.proveedores = provs.map(p=>({codigo:p.codigo, razon:p.razon||'', comercial:p.comercial||p.razon||'', cuit:p.cuit||'', tel:p.tel||'', movil:p.movil||'', email:p.email||'', web:p.web||''}));
+    }catch(e){ /* si la tabla está vacía o falla, queda el ejemplo embebido */ }
+    // Artículos: idem
+    try{
+      const arts = await sbFetch('/articulos?select=codigo,descripcion,desc_adicional,sinonimo,cuenta_cod,cuenta&order=codigo.asc');
+      if(arts && arts.length) DIC.articulos = arts.map(a=>({codigo:a.codigo, descripcion:a.descripcion||'', desc_adicional:a.desc_adicional||'', sinonimo:a.sinonimo||'', cuenta_cod:a.cuenta_cod||'', cuenta:a.cuenta||''}));
+    }catch(e){ /* queda el ejemplo embebido */ }
   }catch(e){ toast('No se pudieron cargar los datos desde la nube.'); }
 }
 window.reloadDB=reloadDB;
