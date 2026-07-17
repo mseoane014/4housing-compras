@@ -2055,15 +2055,38 @@ function renderTesoreria(){
     +'</div>';
   const tabs='<div class="mtabs" style="margin:4px 0 14px">'
     +'<button class="mtab'+(tab==='cola'?' active':'')+'" onclick="setTesTab(\'cola\')">Cola de pagos</button>'
+    +'<button class="mtab'+(tab==='op'?' active':'')+'" onclick="setTesTab(\'op\')">Órdenes de pago</button>'
     +'<button class="mtab'+(tab==='arqueo'?' active':'')+'" onclick="setTesTab(\'arqueo\')">Arqueo de caja</button></div>';
   let body;
   if(tab==='arqueo') body=arqueoView();
+  else if(tab==='op') body=opsView();
   else body=colaView(cola);
   const roleNote='<div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Sección de <strong>Tesorería</strong>. En producción se restringe al rol tesorero (Azure + Supabase); acá se ve en demo.</div>';
   C().innerHTML=kpis+tabs+roleNote+body;
 }
 function setTesTab(t){ TES_TAB=t; renderTesoreria(); }
 window.setTesTab=setTesTab; window.renderTesoreria=renderTesoreria;
+
+/* ---- Vista Órdenes de pago (agrupa pagos por N° de OP) ---- */
+function opsView(){
+  const pagos=(mem.pagos||[]).slice();
+  if(!pagos.length) return '<div class="card"><div class="empty">Todavía no se registraron pagos / órdenes de pago.</div></div>';
+  const byOp={};
+  pagos.forEach(p=>{ const k=(p.op_numero!=null&&p.op_numero!=='')?String(p.op_numero):('s/n·'+p.id); (byOp[k]=byOp[k]||[]).push(p); });
+  const keys=Object.keys(byOp).sort((a,b)=>(parseInt(a,10)||1e9)-(parseInt(b,10)||1e9));
+  const rows=keys.map(k=>{
+    const ps=byOp[k];
+    const mon=ps[0].moneda_pago; const simb=mon==='USD'?'US$ ':'$ ';
+    const total=ps.reduce((a,p)=>a+(+p.importe_pago||0),0);
+    const ogsTxt=[...new Set(ps.map(p=>'OG '+(p.numero||'—')))].join(', ');
+    const caja=CAJAS[mon]?CAJAS[mon].nombre:mon;
+    return '<tr><td><strong>OP '+esc(k)+'</strong></td><td>'+fmtDate(ps[0].fecha)+'</td>'
+      +'<td style="font-size:11px">'+esc(ogsTxt)+'</td><td>'+esc(ps[0].medio||'')+'</td><td style="font-size:11px">'+esc(caja)+'</td>'
+      +'<td style="text-align:right"><strong>'+simb+(total).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'</strong></td></tr>';
+  }).join('');
+  return '<div class="card"><div class="card-h"><h3>Órdenes de pago</h3><span class="meta">Una OP por cada pago. El asiento se generará por OP (próximo paso).</span></div>'
+    +'<table class="grid"><thead><tr><th>OP N°</th><th>Fecha</th><th>OG(s)</th><th>Medio</th><th>Caja</th><th style="text-align:right">Total</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
 
 function colaView(cola){
   if(!cola.length) return '<div class="card"><div class="empty">No hay pagos pendientes. Todo lo liberado está pagado.</div></div>';
@@ -2194,7 +2217,7 @@ async function savePago(ogId){
     sin_caja: COND_SIN_CAJA.includes(o.condicion),
     importe_pago:window._pgImporte||0, observaciones:document.getElementById('pg_obs').value };
   try{
-    if(DEMO_MODE){ pago.id=Math.max(0,...(mem.pagos||[]).map(p=>+p.id||0))+1; mem.pagos=mem.pagos||[]; mem.pagos.push(pago); }
+    if(DEMO_MODE){ pago.id=Math.max(0,...(mem.pagos||[]).map(p=>+p.id||0))+1; pago.op_numero=Math.max(0,...(mem.pagos||[]).map(p=>+p.op_numero||0))+1; mem.pagos=mem.pagos||[]; mem.pagos.push(pago); }
     else { pago.registrado_por=(AUTH_USER&&AUTH_USER.email)||''; await sbFetch('/pagos',{method:'POST',body:JSON.stringify(pago)}); await reloadDB(); }
   }catch(e){
     toast('No se pudo registrar el pago: '+(e && e.message ? e.message : e));
