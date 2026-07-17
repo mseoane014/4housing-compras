@@ -2130,7 +2130,7 @@ function openPago(ogId){
     +'<div class="field"><label>Fecha de pago</label><input id="pg_fecha" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div></div>'
     +'<div class="frow c2"><div class="field"><label>Moneda de pago</label><select id="pg_moneda" onchange="pgCalc()"><option value="ARS"'+(monOG==='ARS'?' selected':'')+'>Pesos (CAJA PESOS 2)</option><option value="USD"'+(monOG==='USD'?' selected':'')+'>Dólares (CAJA DOLARES 3)</option></select></div>'
     +'<div class="field"><label>Medio de pago</label><select id="pg_medio"><option>Efectivo</option><option>Transferencia</option><option>Cheque</option></select></div></div>'
-    +'<div class="field" id="pg_tcField"><label>Tipo de cambio (blue venta, editable)</label><input id="pg_tc" type="number" value="'+esc(tc)+'" oninput="pgCalc()"><div style="font-size:11px;color:var(--muted);margin-top:3px">Se usa solo si la moneda de pago difiere de la de la OG.</div></div>'
+    +'<div class="field" id="pg_tcField"><label>Tipo de cambio (pesos por USD)</label><input id="pg_tc" type="number" step="0.01" value="'+esc(tc)+'" oninput="pgCalc()"><div style="font-size:11px;color:var(--muted);margin-top:3px">Precargado con el dólar blue venta, editable. Se guarda para tener el equivalente en pesos del pago.</div></div>'
     +'<div id="pg_result" style="background:#eef2e6;border-radius:10px;padding:12px;font-size:13px;margin-top:6px"></div>'
     +'<div class="field" style="margin-top:12px"><label>Observaciones</label><input id="pg_obs" type="text"></div>';
   openModal('Registrar pago · OG '+esc(o.numero), body,
@@ -2146,7 +2146,7 @@ function pgCalc(){
   const montoOG=ogTotal(o)*pct/100;   // en moneda de la OG
   let importe=montoOG, nota='';
   const conv = monOG!==monPago;
-  document.getElementById('pg_tcField').style.display = conv?'':'none';
+  document.getElementById('pg_tcField').style.display = '';   // TC siempre visible
   if(conv){
     if(monOG==='USD'&&monPago==='ARS'){ importe=montoOG*tc; nota='US$ '+montoOG.toLocaleString('es-AR',{maximumFractionDigits:2})+' × '+tc+' = '; }
     else if(monOG==='ARS'&&monPago==='USD'){ importe= tc? montoOG/tc : 0; nota='$ '+montoOG.toLocaleString('es-AR')+' ÷ '+tc+' = '; }
@@ -2166,10 +2166,10 @@ async function savePago(ogId){
   if(pct>pend+0.01){ toast('El % supera lo pendiente ('+pend.toFixed(0)+'%)'); return; }
   const monPago=document.getElementById('pg_moneda').value;
   const tc=+document.getElementById('pg_tc').value||0;
-  if(monOG!==monPago && !tc){ toast('Cargá el tipo de cambio'); return; }
+  if((monOG==='USD'||monPago==='USD') && !tc){ toast('Cargá el tipo de cambio'); return; }
   const pago={ og_id:o.id, numero:o.numero,
     fecha:document.getElementById('pg_fecha').value, pct,
-    moneda_og:monOG, moneda_pago:monPago, tc:(monOG!==monPago?tc:null),
+    moneda_og:monOG, moneda_pago:monPago, tc:(tc||null),
     medio:document.getElementById('pg_medio').value, caja_cod:CAJAS[monPago].cod,
     sin_caja: COND_SIN_CAJA.includes(o.condicion),
     importe_pago:window._pgImporte||0, observaciones:document.getElementById('pg_obs').value };
