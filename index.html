@@ -2056,10 +2056,12 @@ function renderTesoreria(){
   const tabs='<div class="mtabs" style="margin:4px 0 14px">'
     +'<button class="mtab'+(tab==='cola'?' active':'')+'" onclick="setTesTab(\'cola\')">Cola de pagos</button>'
     +'<button class="mtab'+(tab==='op'?' active':'')+'" onclick="setTesTab(\'op\')">Órdenes de pago</button>'
+    +'<button class="mtab'+(tab==='proy'?' active':'')+'" onclick="setTesTab(\'proy\')">Proyectado</button>'
     +'<button class="mtab'+(tab==='arqueo'?' active':'')+'" onclick="setTesTab(\'arqueo\')">Arqueo de caja</button></div>';
   let body;
   if(tab==='arqueo') body=arqueoView();
   else if(tab==='op') body=opsView();
+  else if(tab==='proy') body=proyectadoView();
   else body=colaView(cola);
   const roleNote='<div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Sección de <strong>Tesorería</strong>. En producción se restringe al rol tesorero (Azure + Supabase); acá se ve en demo.</div>';
   C().innerHTML=kpis+tabs+roleNote+body;
@@ -2067,17 +2069,62 @@ function renderTesoreria(){
 function setTesTab(t){ TES_TAB=t; renderTesoreria(); }
 window.setTesTab=setTesTab; window.renderTesoreria=renderTesoreria;
 
-/* ---- Vista Órdenes de pago (una fila por renglón: OG que compone la OP) ---- */
+/* ---- Vista Proyectado: cuánto falta pagar, por situación y moneda ---- */
+function proyectadoView(){
+  const fmt2=x=>(+x||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const mfmt=(mon,v)=>(mon==='USD'?'US$ ':'$ ')+fmt2(v);
+  const ogs=(mem.ogs||[]).filter(o=>!o.anulada);
+  const tot={ARS:{sc:0,cl:0,lp:0}, USD:{sc:0,cl:0,lp:0}};
+  const detail=[];
+  ogs.forEach(o=>{
+    const mon=ogMonedaCode(o);
+    const total=ogTotal(o), cert=ogAcumMonto(o), lib=ogLiberado(o), pag=ogPagado(o);
+    const sc=Math.max(0,total-cert), cl=Math.max(0,cert-lib), lp=Math.max(0,lib-pag);
+    if(sc+cl+lp<=0.005) return;
+    tot[mon].sc+=sc; tot[mon].cl+=cl; tot[mon].lp+=lp;
+    detail.push({o,mon,sc,cl,lp});
+  });
+  const totalUSD=tot.USD.sc+tot.USD.cl+tot.USD.lp, totalARS=tot.ARS.sc+tot.ARS.cl+tot.ARS.lp;
+  if(!detail.length) return '<div class="card"><div class="empty">No hay OG con saldo pendiente de pago.</div></div>';
+  // Resumen (situación × moneda)
+  const resumen='<div class="card"><div class="card-h"><h3>Necesidad de fondos proyectada</h3><span class="meta">Lo que falta pagar, por situación y moneda de la OG. Estimado con lo acordado por el comprador; lo ya pagado no figura acá.</span></div>'
+    +'<table class="grid" style="font-size:13px"><thead><tr><th>Situación</th><th style="text-align:right">En USD</th><th style="text-align:right">En ARS</th></tr></thead><tbody>'
+    +'<tr><td>Sin certificar</td><td style="text-align:right">'+(tot.USD.sc?mfmt("USD",tot.USD.sc):'—')+'</td><td style="text-align:right">'+(tot.ARS.sc?mfmt("ARS",tot.ARS.sc):'—')+'</td></tr>'
+    +'<tr><td>Certificado, pend. de liberar</td><td style="text-align:right">'+(tot.USD.cl?mfmt("USD",tot.USD.cl):'—')+'</td><td style="text-align:right">'+(tot.ARS.cl?mfmt("ARS",tot.ARS.cl):'—')+'</td></tr>'
+    +'<tr><td>Certificado y liberado (por pagar)</td><td style="text-align:right">'+(tot.USD.lp?mfmt("USD",tot.USD.lp):'—')+'</td><td style="text-align:right">'+(tot.ARS.lp?mfmt("ARS",tot.ARS.lp):'—')+'</td></tr>'
+    +'<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td>Total a necesitar</td><td style="text-align:right">'+(totalUSD?mfmt("USD",totalUSD):'—')+'</td><td style="text-align:right">'+(totalARS?mfmt("ARS",totalARS):'—')+'</td></tr>'
+    +'</tbody></table></div>';
+  // Detalle por OG
+  const drows=detail.sort((a,b)=>String(a.o.numero||'').localeCompare(String(b.o.numero||''))).map(d=>{
+    const o=d.o, mon=d.mon;
+    return '<tr><td><strong>'+esc(o.numero||'')+'</strong><div style="font-size:11px;color:var(--muted)">'+esc(o.proveedor_cod||'')+'</div></td>'
+      +'<td>'+esc(o.clasif_og||'')+'</td>'
+      +'<td>'+badge(mon==='USD'?'USD':'Pesos')+'</td>'
+      +'<td style="text-align:right">'+(d.sc?mfmt(mon,d.sc):'—')+'</td>'
+      +'<td style="text-align:right">'+(d.cl?mfmt(mon,d.cl):'—')+'</td>'
+      +'<td style="text-align:right">'+(d.lp?mfmt(mon,d.lp):'—')+'</td>'
+      +'<td style="text-align:right"><strong>'+mfmt(mon,d.sc+d.cl+d.lp)+'</strong></td></tr>';
+  }).join('');
+  const detalle='<div class="card" style="margin-top:14px"><div class="card-h"><h3>Detalle por OG</h3><span class="meta">Montos en la moneda de cada OG.</span></div>'
+    +'<table class="grid" style="font-size:12.5px"><thead><tr><th>OG</th><th>Clasif.</th><th>Moneda</th><th style="text-align:right">Sin certificar</th><th style="text-align:right">Cert. pend. liberar</th><th style="text-align:right">Liberado por pagar</th><th style="text-align:right">Total pend.</th></tr></thead><tbody>'+drows+'</tbody></table></div>';
+  return resumen+detalle;
+}
+window.proyectadoView=proyectadoView;
 function opsView(){
   const pagos=(mem.pagos||[]).slice();
   if(!pagos.length) return '<div class="card"><div class="empty">Todavía no se registraron pagos / órdenes de pago.</div></div>';
   // ordenar por N° de OP y, dentro, por OG
   pagos.sort((a,b)=>((+a.op_numero||1e9)-(+b.op_numero||1e9)) || (String(a.numero||'').localeCompare(String(b.numero||''))));
   let totARS=0, totUSD=0;
+  const fmt2=x=>(+x||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const rows=pagos.map(p=>{
     const o=ogById(p.og_id)||{};
-    const mon=p.moneda_pago; const simb=mon==='USD'?'US$ ':'$ ';
-    const imp=+p.importe_pago||0; if(mon==='USD') totUSD+=imp; else totARS+=imp;
+    const mon=p.moneda_pago; const imp=+p.importe_pago||0; const tc=+p.tc||0;
+    // Montos reales del pago en cada moneda
+    let mUSD=null, mARS=null;
+    if(mon==='USD'){ mUSD=imp; mARS = tc? imp*tc : null; }
+    else { mARS=imp; mUSD = tc? imp/tc : null; }
+    if(mUSD!=null) totUSD+=mUSD; if(mARS!=null) totARS+=mARS;
     const caja=CAJAS[mon]?CAJAS[mon].nombre:mon;
     return '<tr><td><strong>OP '+esc(p.op_numero!=null?p.op_numero:'—')+'</strong></td>'
       +'<td>'+fmtDate(p.fecha)+'</td>'
@@ -2088,35 +2135,45 @@ function opsView(){
       +'<td style="font-size:11px">'+esc(o.comprador||'')+'</td>'
       +'<td>'+esc(p.medio||'')+'</td>'
       +'<td style="font-size:11px">'+esc(caja)+'</td>'
-      +'<td style="text-align:right"><strong>'+simb+imp.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'</strong></td></tr>';
+      +'<td style="text-align:right">'+(tc?fmtNum(tc,2):'—')+'</td>'
+      +'<td style="text-align:right">'+(mUSD!=null?'US$ '+fmt2(mUSD):'—')+'</td>'
+      +'<td style="text-align:right"><strong>'+(mARS!=null?'$ '+fmt2(mARS):'—')+'</strong></td></tr>';
   }).join('');
-  const totCell = (totARS?'$ '+totARS.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}):'')
-    + (totARS&&totUSD?' · ':'')
-    + (totUSD?'US$ '+totUSD.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}):'');
-  const foot='<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td colspan="9" style="text-align:right">Total mostrado</td><td style="text-align:right">'+(totCell||'—')+'</td></tr>';
+  const foot='<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td colspan="10" style="text-align:right">Total mostrado</td>'
+    +'<td style="text-align:right">'+(totUSD?'US$ '+fmt2(totUSD):'—')+'</td>'
+    +'<td style="text-align:right">'+(totARS?'$ '+fmt2(totARS):'—')+'</td></tr>';
   return '<div class="card"><div class="card-h"><h3>Órdenes de pago</h3><span class="meta">Una fila por OG pagada. Cuando una OP agrupe varias OG, el N° de OP se repite. El asiento se generará por OP (próximo paso).</span></div>'
-    +'<table class="grid" style="font-size:12.5px"><thead><tr><th>OP N°</th><th>Fecha</th><th>OG</th><th>Prov.</th><th>Clasif.</th><th>SOLP</th><th>Comprador</th><th>Medio</th><th>Caja</th><th style="text-align:right">Total</th></tr></thead><tbody>'+rows+foot+'</tbody></table></div>';
+    +'<table class="grid" style="font-size:12.5px"><thead><tr><th>OP N°</th><th>Fecha</th><th>OG</th><th>Prov.</th><th>Clasif.</th><th>SOLP</th><th>Comprador</th><th>Medio</th><th>Caja</th><th style="text-align:right">TC pago</th><th style="text-align:right">Monto USD</th><th style="text-align:right">Monto ARS</th></tr></thead><tbody>'+rows+foot+'</tbody></table></div>';
 }
 
 function colaView(cola){
   if(!cola.length) return '<div class="card"><div class="empty">No hay pagos pendientes. Todo lo liberado está pagado.</div></div>';
   const demoTag=DEMO_MODE?'<span class="demo-tag">DATOS DE EJEMPLO</span>':'';
+  const fmt2=x=>(+x||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const rows=cola.map(o=>{
     const mon=ogMonedaCode(o); const pend=ogTotal(o)*ogPendPagoPct(o)/100;
     const pagadoPct=ogPagadoPct(o);
+    const tc=(o.tc_pesos!=null && o.tc_pesos!=='')?+o.tc_pesos:null;
+    // Pendiente en cada moneda. ARS estimado con el TC de la OG (el tesorero puede cambiarlo al pagar).
+    let mUSD=null, mARS=null;
+    if(mon==='USD'){ mUSD=pend; mARS = tc? pend*tc : null; }
+    else { mARS=pend; mUSD = tc? pend/tc : null; }
     return '<tr>'
       +'<td><strong>'+esc(o.numero)+'</strong><div style="font-size:11px;color:var(--muted)">'+esc(o.proveedor||'')+'</div></td>'
       +'<td>'+(o.clasif_og?esc(o.clasif_og):esc(o.objeto||''))+'</td>'
-      +'<td>'+badge(mon==='USD'?'USD':'Pesos')+'</td>'
       +'<td>'+ogLiberadoPct(o).toFixed(0)+'% liberado'+(pagadoPct>0?'<div style="font-size:11px;color:var(--muted)">'+pagadoPct.toFixed(0)+'% pagado</div>':'')+'</td>'
-      +'<td><strong>'+(mon==='USD'?'US$ '+pend.toLocaleString('es-AR',{maximumFractionDigits:2}):fmtMoney(pend))+'</strong></td>'
       +'<td>'+esc(o.certificador||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(o.condicion||'—')+'</td>'
+      +'<td>'+badge(mon==='USD'?'USD':'Pesos')+'</td>'
+      +'<td style="text-align:right">'+(tc?fmtNum(tc,2):'—')+'</td>'
+      +'<td style="text-align:right">'+(mUSD!=null?'US$ '+fmt2(mUSD):'—')+'</td>'
+      +'<td style="text-align:right"><strong>'+(mARS!=null?'$ '+fmt2(mARS):'—')+'</strong></td>'
       +'<td><div class="row-actions"><button class="btn ghost sm" onclick="verRespaldo('+o.id+')">Ver respaldo</button>'
       +'<button class="btn ghost sm" onclick="openImputacion('+o.id+')">Imputación</button>'
       +'<button class="btn sm" onclick="openPago('+o.id+')">Registrar pago</button></div></td></tr>';
   }).join('');
-  return '<div class="card"><div class="card-h"><h3>Cola de pagos'+demoTag+'</h3><span class="meta">Certificado y liberado por el área técnica, pendiente de pago</span><button class="btn ghost sm" style="margin-left:auto" onclick="exportAsientoTodas()">Exportar asiento</button></div>'
-    +'<table class="grid"><thead><tr><th>OG</th><th>Clasif.</th><th>Moneda OG</th><th>Estado</th><th>Pendiente</th><th>Certificó</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  return '<div class="card"><div class="card-h"><h3>Cola de pagos'+demoTag+'</h3><span class="meta">Certificado y liberado, pendiente de pago. El Monto ARS es estimado con el TC de la OG.</span><button class="btn ghost sm" style="margin-left:auto" onclick="exportAsientoTodas()">Exportar asiento</button></div>'
+    +'<table class="grid" style="font-size:12.5px"><thead><tr><th>OG</th><th>Clasif.</th><th>Estado</th><th>Certificó</th><th>Cond. compra</th><th>Moneda OG</th><th style="text-align:right">TC (OG)</th><th style="text-align:right">Monto USD</th><th style="text-align:right">Monto ARS</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function verRespaldo(ogId){
