@@ -1624,7 +1624,7 @@ window.confirmDelHerr=confirmDelHerr;
    ================================================================ */
 const OG_EXPANDED=new Set();
 let TES_TAB='cola';
-let OG_FILTRO={comprador:'',certificador:'',estado:'todas'};
+let OG_FILTRO={comprador:'',certificador:'',proveedor:'',estado:'todas'};
 let USD_VENTA=null, USD_FECHA='';
 async function fetchUSD(){
   try{
@@ -1635,7 +1635,7 @@ async function fetchUSD(){
 }
 window.fetchUSD=fetchUSD;
 function setOGFiltro(k,v){ OG_FILTRO[k]=v; renderCompras(); }
-function limpiarOGFiltro(){ OG_FILTRO={comprador:'',certificador:'',estado:'todas'}; renderCompras(); }
+function limpiarOGFiltro(){ OG_FILTRO={comprador:'',certificador:'',proveedor:'',estado:'todas'}; renderCompras(); }
 window.setOGFiltro=setOGFiltro; window.limpiarOGFiltro=limpiarOGFiltro;
 const TIPO_CONTRAT=['Contado real','Cuenta corriente','Anticipo','Otro'];
 const UM_LIST=['UNI','UN','M2','M3','ML','KG','GL','HS','JOR','Mts','CM'];
@@ -1782,6 +1782,7 @@ async function renderCompras(){
   // Filtros por rol (comprador / certificador / estado del proceso)
   let ogs=ogsAll.slice();
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
+  if(OG_FILTRO.proveedor) ogs=ogs.filter(o=>(o.proveedor_cod||'')===OG_FILTRO.proveedor);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
@@ -1799,14 +1800,18 @@ async function renderCompras(){
   // barra de filtros
   const compradores=[...new Set(ogsAll.map(o=>o.comprador).filter(Boolean))].sort();
   const certifs=[...new Set(ogsAll.map(o=>o.certificador).filter(Boolean))].sort();
+  const provsMap={}; ogsAll.forEach(o=>{ if(o.proveedor_cod) provsMap[o.proveedor_cod]=o.proveedor||''; });
+  const provs=Object.keys(provsMap).sort();
+  const selProv='<option value="">Proveedor: todos</option>'+provs.map(c=>'<option value="'+esc(c)+'"'+(OG_FILTRO.proveedor===c?' selected':'')+'>'+esc(c+(provsMap[c]?' · '+provsMap[c]:''))+'</option>').join('');
   const selEstado=[['todas','Todas'],['por_certificar','Por certificar'],['a_pagar','Liberadas a pagar (tesorería)'],['pagadas','Pagadas']]
     .map(x=>'<option value="'+x[0]+'"'+(OG_FILTRO.estado===x[0]?' selected':'')+'>'+x[1]+'</option>').join('');
   const selComp='<option value="">Comprador: todos</option>'+compradores.map(n=>'<option'+(OG_FILTRO.comprador===n?' selected':'')+'>'+esc(n)+'</option>').join('');
   const selCert='<option value="">Certifica: todos</option>'+certifs.map(n=>'<option'+(OG_FILTRO.certificador===n?' selected':'')+'>'+esc(n)+'</option>').join('');
   const fsty='border:1px solid var(--line-strong);border-radius:9px;padding:7px 10px;font-size:12.5px;background:#fff';
-  const activo = OG_FILTRO.comprador||OG_FILTRO.certificador||OG_FILTRO.estado!=='todas';
+  const activo = OG_FILTRO.comprador||OG_FILTRO.certificador||OG_FILTRO.proveedor||OG_FILTRO.estado!=='todas';
   const filtros='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'
     +'<select style="'+fsty+'" onchange="setOGFiltro(\'estado\',this.value)">'+selEstado+'</select>'
+    +'<select style="'+fsty+'" onchange="setOGFiltro(\'proveedor\',this.value)">'+selProv+'</select>'
     +'<select style="'+fsty+'" onchange="setOGFiltro(\'comprador\',this.value)">'+selComp+'</select>'
     +'<select style="'+fsty+'" onchange="setOGFiltro(\'certificador\',this.value)">'+selCert+'</select>'
     +(activo?'<button class="btn ghost sm" onclick="limpiarOGFiltro()">Limpiar filtros</button>':'')
@@ -1821,7 +1826,8 @@ async function renderCompras(){
       const nItems=(o.items||[]).length;
       const roles=(o.comprador||o.certificador)?'<div style="font-size:11px;color:var(--muted)">'+(o.comprador?'compra: '+esc(o.comprador):'')+(o.comprador&&o.certificador?' · ':'')+(o.certificador?'certifica: '+esc(o.certificador):'')+'</div>':'';
       const head='<tr class="og-head">'
-        +'<td><button class="iconbtn" title="Ver detalle" onclick="toggleOG('+o.id+')" style="margin-right:4px">'+(exp?'▾':'▸')+'</button><strong>'+esc(o.numero||'—')+'</strong>'+(o.proveedor?'<div style="font-size:11px;color:var(--muted)">'+(o.proveedor_cod?esc(o.proveedor_cod)+' · ':'')+esc(o.proveedor)+'</div>':'')+roles+'</td>'
+        +'<td><button class="iconbtn" title="Ver detalle" onclick="toggleOG('+o.id+')" style="margin-right:4px">'+(exp?'▾':'▸')+'</button><strong>'+esc(o.numero||'—')+'</strong>'+roles+'</td>'
+        +'<td style="font-size:12px;color:var(--muted)">'+(o.proveedor_cod?esc(o.proveedor_cod):'—')+'</td>'
         +'<td style="color:var(--muted)">'+(o.clasif_og?('<strong>'+esc(o.clasif_og)+'</strong>'+(clasifDesc(o.clasif_og)&&clasifDesc(o.clasif_og)!==o.clasif_og?' · '+esc(clasifDesc(o.clasif_og)):'')):esc(o.objeto||''))+'</td>'
         +'<td style="color:var(--muted)">'+(o.solp!=null&&o.solp!==''?esc(o.solp):'—')+'</td>'
         +'<td style="font-size:12px;color:var(--muted)">'+(nItems?nItems+' renglón'+(nItems>1?'es':''):'—')+(nCert?' · '+nCert+' cert.':'')+'</td>'
@@ -1834,7 +1840,7 @@ async function renderCompras(){
         +'</div></td></tr>';
       return head+(exp?ogDetail(o):'');
     }).join('');
-    body='<table class="grid og-grid"><thead><tr><th>OG</th><th>Clasificación</th><th>SOLP</th><th>Detalle</th><th>Total</th><th>Avance</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+tr+'</tbody></table>';
+    body='<table class="grid og-grid" style="font-size:12.5px"><thead><tr><th>OG</th><th>Proveedor</th><th>Clasificación</th><th>SOLP</th><th>Detalle</th><th>Total</th><th>Avance</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>'+tr+'</tbody></table>';
   }
   const demoTag=DEMO_MODE?'<span class="demo-tag">DATOS DE EJEMPLO</span>':'';
   const usdTxt = USD_VENTA ? ' · USD venta $'+USD_VENTA+(USD_FECHA?' ('+USD_FECHA.split('-').reverse().join('/')+')':'') : ' · USD: cargá conexión';
@@ -1872,8 +1878,8 @@ function ogDetail(o){
           +'<td>'+ac.toFixed(1).replace('.0','')+'%</td></tr>'; }).join('')
       +'</tbody></table>'
     : '<div style="font-size:12.5px;color:var(--muted);padding:2px 0">Sin renglones — se certifica a nivel OG por el monto total.</div>';
-  return '<tr class="detail-row"><td colspan="8"><div class="detail-wrap">'
-    +'<div class="detail-h"><span>Renglones de OG '+esc(o.numero||'')+'</span>'
+  return '<tr class="detail-row"><td colspan="9"><div class="detail-wrap">'
+    +'<div class="detail-h"><span>Renglones de OG '+esc(o.numero||'')+(o.proveedor?' · '+esc((o.proveedor_cod?o.proveedor_cod+' — ':'')+o.proveedor):'')+'</span>'
     +'<button class="btn ghost sm" onclick="openOG('+o.id+')">'+ICO.edit+'Editar OG</button></div>'+reng
     +certInner(o)+'</div></td></tr>';
 }
@@ -2004,6 +2010,7 @@ window.asientoRows=asientoRows;
 function ogsFiltradas(){
   let ogs=(mem.ogs||[]).slice();
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
+  if(OG_FILTRO.proveedor) ogs=ogs.filter(o=>(o.proveedor_cod||'')===OG_FILTRO.proveedor);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
@@ -2222,6 +2229,7 @@ function exportOGExcel(){
   // respeta el filtro actual
   let ogs=(mem.ogs||[]).slice();
   if(OG_FILTRO.comprador) ogs=ogs.filter(o=>o.comprador===OG_FILTRO.comprador);
+  if(OG_FILTRO.proveedor) ogs=ogs.filter(o=>(o.proveedor_cod||'')===OG_FILTRO.proveedor);
   if(OG_FILTRO.certificador) ogs=ogs.filter(o=>o.certificador===OG_FILTRO.certificador);
   if(OG_FILTRO.estado==='por_certificar') ogs=ogs.filter(o=>ogAcumPct(o.id)<99.999);
   else if(OG_FILTRO.estado==='a_pagar') ogs=ogs.filter(o=>(ogLiberado(o)-ogPagado(o))>0.005);
