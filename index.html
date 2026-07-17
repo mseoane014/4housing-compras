@@ -1623,7 +1623,7 @@ window.confirmDelHerr=confirmDelHerr;
    Demo: mem.ogs / mem.certificados.  Producción: tablas ogs / og_certificados.
    ================================================================ */
 const OG_EXPANDED=new Set();
-let TES_TAB='cola';
+let TES_TAB='proy';
 let OG_FILTRO={comprador:'',certificador:'',proveedor:'',estado:'todas'};
 let USD_VENTA=null, USD_FECHA='';
 async function fetchUSD(){
@@ -2054,9 +2054,9 @@ function renderTesoreria(){
     +'<div class="kpi"><div class="kpi-label">Pagado en el mes ($)</div><div class="kpi-val">'+fmtMoney(pagadoMesArs)+'</div><div class="kpi-sub">CAJA PESOS</div></div>'
     +'</div>';
   const tabs='<div class="mtabs" style="margin:4px 0 14px">'
+    +'<button class="mtab'+(tab==='proy'?' active':'')+'" onclick="setTesTab(\'proy\')">Proyectado</button>'
     +'<button class="mtab'+(tab==='cola'?' active':'')+'" onclick="setTesTab(\'cola\')">Cola de pagos</button>'
     +'<button class="mtab'+(tab==='op'?' active':'')+'" onclick="setTesTab(\'op\')">Órdenes de pago</button>'
-    +'<button class="mtab'+(tab==='proy'?' active':'')+'" onclick="setTesTab(\'proy\')">Proyectado</button>'
     +'<button class="mtab'+(tab==='arqueo'?' active':'')+'" onclick="setTesTab(\'arqueo\')">Arqueo de caja</button></div>';
   let body;
   if(tab==='arqueo') body=arqueoView();
@@ -2086,14 +2086,31 @@ function proyectadoView(){
   });
   const totalUSD=tot.USD.sc+tot.USD.cl+tot.USD.lp, totalARS=tot.ARS.sc+tot.ARS.cl+tot.ARS.lp;
   if(!detail.length) return '<div class="card"><div class="empty">No hay OG con saldo pendiente de pago.</div></div>';
-  // Resumen (situación × moneda)
-  const resumen='<div class="card"><div class="card-h"><h3>Necesidad de fondos proyectada</h3><span class="meta">Lo que falta pagar, por situación y moneda de la OG. Estimado con lo acordado por el comprador; lo ya pagado no figura acá.</span></div>'
-    +'<table class="grid" style="font-size:13px"><thead><tr><th>Situación</th><th style="text-align:right">En USD</th><th style="text-align:right">En ARS</th></tr></thead><tbody>'
-    +'<tr><td>Sin certificar</td><td style="text-align:right">'+(tot.USD.sc?mfmt("USD",tot.USD.sc):'—')+'</td><td style="text-align:right">'+(tot.ARS.sc?mfmt("ARS",tot.ARS.sc):'—')+'</td></tr>'
-    +'<tr><td>Certificado, pend. de liberar</td><td style="text-align:right">'+(tot.USD.cl?mfmt("USD",tot.USD.cl):'—')+'</td><td style="text-align:right">'+(tot.ARS.cl?mfmt("ARS",tot.ARS.cl):'—')+'</td></tr>'
-    +'<tr><td>Certificado y liberado (por pagar)</td><td style="text-align:right">'+(tot.USD.lp?mfmt("USD",tot.USD.lp):'—')+'</td><td style="text-align:right">'+(tot.ARS.lp?mfmt("ARS",tot.ARS.lp):'—')+'</td></tr>'
-    +'<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td>Total a necesitar</td><td style="text-align:right">'+(totalUSD?mfmt("USD",totalUSD):'—')+'</td><td style="text-align:right">'+(totalARS?mfmt("ARS",totalARS):'—')+'</td></tr>'
-    +'</tbody></table></div>';
+  const COL={sc:'#c9c49f', cl:'#5f7a4e', lp:'#37432c'};   // colores de las 3 situaciones
+  // Torta SVG dibujada a mano (sin librería). Devuelve '' si no hay total.
+  function donut(sc,cl,lp){
+    const total=sc+cl+lp; if(total<=0) return '<div style="width:104px;height:104px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center">sin saldo</div>';
+    const C=2*Math.PI*46; const seg=v=>v/total*C;
+    const L1=seg(sc), L2=seg(cl), L3=seg(lp);
+    const arc=(len,off,color)=>'<circle cx="60" cy="60" r="46" fill="none" stroke="'+color+'" stroke-width="16" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'" transform="rotate(-90 60 60)"></circle>';
+    return '<svg viewBox="0 0 120 120" width="104" height="104" role="img" aria-label="Desglose por situación">'
+      +'<circle cx="60" cy="60" r="46" fill="none" stroke="#e6e3d5" stroke-width="16"></circle>'
+      +(sc>0?arc(L1,0,COL.sc):'')+(cl>0?arc(L2,-L1,COL.cl):'')+(lp>0?arc(L3,-(L1+L2),COL.lp):'')
+      +'</svg>';
+  }
+  function card(titulo,mon,b){
+    const total=b.sc+b.cl+b.lp; const simb=mon==='USD'?'US$ ':'$ ';
+    const leg=(color,txt,val)=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="width:10px;height:10px;border-radius:2px;background:'+color+';display:inline-block"></span>'+txt+' <strong style="margin-left:auto;color:var(--olive-ink)">'+(val>0?simb+fmt2(val):'—')+'</strong></div>';
+    return '<div style="background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:16px 18px">'
+      +'<div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase">'+titulo+'</div>'
+      +'<div style="font-size:28px;font-weight:700;color:var(--olive-ink);margin:2px 0 12px">'+(total>0?simb+fmt2(total):simb+'0,00')+'</div>'
+      +'<div style="display:flex;align-items:center;gap:14px">'+donut(b.sc,b.cl,b.lp)
+      +'<div style="font-size:12px;line-height:1.5;color:var(--ink);flex:1">'
+      +leg(COL.sc,'Sin certificar',b.sc)+leg(COL.cl,'Cert. pend. liberar',b.cl)+leg(COL.lp,'Liberado por pagar',b.lp)
+      +'</div></div></div>';
+  }
+  const resumen='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
+    +card('Necesita en pesos','ARS',tot.ARS)+card('Necesita en dólares','USD',tot.USD)+'</div>';
   // Detalle por OG
   const drows=detail.sort((a,b)=>String(a.o.numero||'').localeCompare(String(b.o.numero||''))).map(d=>{
     const o=d.o, mon=d.mon;
@@ -2273,7 +2290,7 @@ async function savePago(ogId){
   let pct=+document.getElementById('pg_pct').value||0;
   const pend=ogPendPagoPct(o);
   if(pct<=0){ toast('Ingresá un % mayor a 0'); return; }
-  if(pct>pend+0.5){ toast('El % supera lo pendiente ('+Math.round(pend)+'%)'); return; }
+  if(pct>pend+0.5){ toast('El % supera lo pendiente (exacto: '+pend.toFixed(4)+'%)'); return; }
   if(pct>pend) pct=pend;   // cargó el pendiente redondeado; ajusto al exacto para no pasarme
   const monPago=document.getElementById('pg_moneda').value;
   const tc=+document.getElementById('pg_tc').value||0;
