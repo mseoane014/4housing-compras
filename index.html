@@ -727,7 +727,7 @@ function setHeader(view){
   if(view==='mantenimiento'){
     setMantActions();
   }else if(view==='compras'){
-    document.getElementById('topActions').innerHTML='<button class="btn ghost" onclick="exportOGExcel()">Exportar Excel</button>'+(canCert()?'<button class="btn ghost" onclick="openCertPanel()">Certificar</button>':'')+(canEditOG()?'<button class="btn" onclick="openOG()">'+ICO.plus+'Nueva OG</button>':'');
+    document.getElementById('topActions').innerHTML='<button class="btn ghost" onclick="exportOGExcel()">Exportar Excel</button>'+(canCert()?'<button class="btn ghost" onclick="openCertPanel()">Certificar</button>':'')+(canEditOG()?'<button class="btn ghost" onclick="openLiberarPanel()">Liberar a pago</button>':'')+(canEditOG()?'<button class="btn" onclick="openOG()">'+ICO.plus+'Nueva OG</button>':'');
   }else if(view==='diccionarios'){
     document.getElementById('topActions').innerHTML='';
   }else{
@@ -2254,6 +2254,37 @@ function openCertPanel(){
   renderCertPanel();
 }
 window.openCertPanel=openCertPanel;
+/* ---- Panel del comprador: certificados pendientes de liberar al pago ---- */
+function liberarRows(){
+  const rows=[];
+  ogsAll.forEach(o=>{ if(o.anulada) return;
+    certsOf(o.id).forEach(c=>{
+      if(c.aprobacion==='SI' && c.estado==='Liberado') return;   // ya liberado
+      rows.push('<tr><td><strong>'+esc(o.numero||'')+'</strong></td><td>'+esc(c.numero||'')+'</td><td>'+fmtDate(c.fecha)+'</td><td style="font-size:11px">'+esc(o.proveedor_cod||'')+'</td><td style="text-align:right">'+fmtMoney(certMonto(c,o))+'</td><td style="text-align:right"><button class="btn sm" onclick="liberarCert('+o.id+','+c.id+')">Liberar</button></td></tr>');
+    });
+  });
+  return rows;
+}
+function openLiberarPanel(){
+  if(!canEditOG()){ toast('Solo el comprador (o admin) puede liberar pagos.'); return; }
+  const rows=liberarRows();
+  const body = rows.length
+    ? '<div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Certificados de avance que el área técnica ya cargó y todavía no están liberados. Al liberar, entran en la cola de pagos de Tesorería. Queda registrado quién liberó.</div>'
+      +'<table class="grid usub" style="font-size:12.5px"><thead><tr><th>OG</th><th>Cert.</th><th>Fecha</th><th>Prov.</th><th style="text-align:right">Monto</th><th></th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'
+    : '<div class="empty">No hay certificados pendientes de liberar.</div>';
+  openModal('Certificados pendientes de liberar', body, '<button class="btn ghost" onclick="closeModal()">Cerrar</button>');
+}
+window.openLiberarPanel=openLiberarPanel;
+async function liberarCert(ogId, id){
+  if(!canEditOG()){ toast('Solo el comprador (o admin) puede liberar pagos.'); return; }
+  const patch={ aprobacion:'SI', estado:'Liberado', liberado_por:(AUTH_USER&&AUTH_USER.email)||'', liberado_fecha:new Date().toISOString().slice(0,10) };
+  try{
+    if(DEMO_MODE){ const r=mem.certificados.find(x=>String(x.id)===String(id)); if(r) Object.assign(r,patch); }
+    else { await sbFetch('/og_certificados?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)}); await reloadDB(); }
+  }catch(e){ toast('No se pudo liberar: '+(e&&e.message?e.message:e)); return; }
+  toast('Certificado liberado al pago'); openLiberarPanel(); renderCompras();
+}
+window.liberarCert=liberarCert;
 function renderCertPanel(){
   const box=document.getElementById('cpList'); if(!box) return;
   const who=document.getElementById('cp_cert').value;
@@ -2607,10 +2638,7 @@ function openCert(ogId, id){
   const body='<div class="frow c2"><div class="field"><label>Certificado N°</label><input id="ct_num" type="text" readonly value="'+esc(num)+'" style="background:#f3f1e8"><div style="font-size:11px;color:var(--muted);margin-top:4px">Automático: N° de OG + secuencia.</div></div>'
     +'<div class="field"><label>Fecha</label><input id="ct_fecha" type="date" value="'+esc(cur.fecha||hoy)+'"></div></div>'
     +avanceHtml
-    +'<div class="frow c2"><div class="field"><label>Aprobación</label><select id="ct_aprob"><option'+(cur.aprobacion==='SI'?' selected':'')+'>SI</option><option'+(cur.aprobacion==='NO'||!cur.aprobacion?' selected':'')+'>NO</option></select></div>'
-    +'<div class="field"><label>Estado</label><select id="ct_estado"><option'+(cur.estado==='Liberado'?' selected':'')+'>Liberado</option><option'+(cur.estado==='Pendiente'||!cur.estado?' selected':'')+'>Pendiente</option></select></div></div>'
-    +'<div class="frow c2"><div class="field"><label>¿Pagado?</label><select id="ct_pagado"><option value="no"'+(!cur.pagado?' selected':'')+'>No</option><option value="si"'+(cur.pagado?' selected':'')+'>Sí</option></select></div>'
-    +'<div class="field"><label>Fecha de pago</label><input id="ct_fpago" type="date" value="'+esc(cur.fecha_pago||'')+'"></div></div>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin:2px 0 10px">Al guardar, el certificado queda <strong>pendiente de liberar</strong>. El comprador lo libera al pago desde “Liberar a pago”. El pago lo registra Tesorería.</div>'
     +'<div class="field"><label>Observaciones</label><textarea id="ct_obs">'+esc(cur.observaciones||'')+'</textarea></div>';
   openModal((id!=null?'Editar certificado':'Nuevo certificado')+' · OG '+esc(o?o.numero:''), body,
     '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCert('+ogId+','+(id!=null?id:'null')+')">Guardar</button>');
@@ -2622,8 +2650,6 @@ async function saveCert(ogId, id){
   if(editando && pagosOf(ogId).length>0){ toast('La OG tiene pagos: no se puede editar el certificado. El tesorero debe eliminar el pago primero.'); return; }
   const o=ogById(ogId); const hasItems = o && o.items && o.items.length;
   const obj={ og_id:ogId, numero:document.getElementById('ct_num').value, fecha:document.getElementById('ct_fecha').value,
-    aprobacion:document.getElementById('ct_aprob').value, estado:document.getElementById('ct_estado').value,
-    pagado:document.getElementById('ct_pagado').value==='si', fecha_pago:document.getElementById('ct_fpago').value,
     observaciones:document.getElementById('ct_obs').value };
   if(id==null||id==='null') obj.numero = nextCertNum(o);   // recalcula al guardar (evita colisiones)
   if(hasItems){ const av={}; o.items.forEach((it,idx)=>{ const el=document.getElementById('ctav_'+idx); if(el && el.value!=='') av[idx]=+el.value; }); obj.avances=av; obj.pct=null; }
