@@ -1664,11 +1664,11 @@ function nextCertNum(o){
 }
 function itemTotal(it){ return (+it.cant||0)*(+it.precio_unit||0); }
 // Prefijo de moneda según el select de la OG en edición: Corriente=$, Extranjera=USD
-function ogMonedaSym(){ const el=document.getElementById('og_moneda'); return (el && el.value==='Extranjera') ? 'US$ ' : '$'; }
+function ogMonedaSym(){ const el=document.getElementById('og_moneda'); return (el && el.value==='Extranjera') ? 'US$ ' : '$ '; }
 // Importe formateado es-AR con 3 decimales y prefijo de moneda (para totales de renglón y total OG)
 function fmtImporte(v){ return ogMonedaSym()+(+v||0).toLocaleString('es-AR',{minimumFractionDigits:3,maximumFractionDigits:3}); }
 // Parseo tolerante: acepta "1.000.000,50" (AR) o "1000000.5" (plano). Devuelve número o null.
-function parseNum(s){ s=String(s==null?'':s).trim(); if(s==='') return null; if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.'); const n=parseFloat(s); return isNaN(n)?null:n; }
+function parseNum(s){ s=String(s==null?'':s).trim(); if(s==='') return null; s=s.replace(/[^\d.,-]/g,''); if(s==='') return null; if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.'); const n=parseFloat(s); return isNaN(n)?null:n; }
 // Formato es-AR con cantidad fija de decimales; '' si viene vacío.
 function fmtNum(v,dec){ return (v==null||v==='')?'':(+v||0).toLocaleString('es-AR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
 window.parseNum=parseNum; window.fmtNum=fmtNum;
@@ -1930,7 +1930,7 @@ async function renderCompras(){
         +'<td style="color:var(--muted)">'+(o.clasif_og?('<strong>'+esc(o.clasif_og)+'</strong>'+(clasifDesc(o.clasif_og)&&clasifDesc(o.clasif_og)!==o.clasif_og?'<span style="font-size:11px"> · '+esc(clasifDesc(o.clasif_og))+'</span>':'')):esc(o.objeto||''))+'</td>'
         +'<td style="color:var(--muted)">'+(o.solp!=null&&o.solp!==''?esc(o.solp):'—')+'</td>'
         +'<td style="font-size:11px;color:var(--muted)">'+(nItems?nItems+' renglón'+(nItems>1?'es':''):'—')+(nCert?' · '+nCert+' cert.':'')+'</td>'
-        +'<td><strong>'+(ogMonedaCode(o)==='USD'?'US$ ':'$')+ogTotal(o).toLocaleString('es-AR')+'</strong></td>'
+        +'<td><strong>'+(ogMonedaCode(o)==='USD'?'US$ ':'$ ')+ogTotal(o).toLocaleString('es-AR')+'</strong></td>'
         +'<td style="min-width:110px">'+pbar(ogAcumPct(o.id))+'</td>'
         +'<td>'+badge(ogEstado(o))+'</td>'
         +'<td><div class="row-actions">'
@@ -2673,9 +2673,9 @@ function renderOGItems(){
         +'<td style="text-align:right">'+fmtNum(it.cant,2)+'</td>'
         +'<td>'+esc(it.um||'')+'</td>'
         +'<td style="font-size:10px;color:var(--muted)">'+(it.cert_modo==='unid'?'Unid':'%')+'</td>'
-        +'<td style="text-align:right">'+fmtNum(it.precio_unit,3)+'</td>'
+        +'<td style="text-align:right">'+ogMonedaSym()+fmtNum(it.precio_unit,3)+'</td>'
         +'<td id="ogit_'+i+'">'+fmtImporte(itemTotal(it))+'</td>'
-        +'<td><span title="Renglón certificado: no se puede editar ni eliminar" style="font-size:10px;color:var(--muted);font-weight:700">CERT.</span></td></tr>';
+        +'<td style="text-align:center"><span title="Renglón ya certificado: no se puede editar ni eliminar" style="font-size:13px;color:var(--muted)">🔒</span></td></tr>';
       }
       const mods=(it.modulos||[]).map((m,j)=>'<span style="display:inline-flex;align-items:center;gap:3px;background:#eceae1;border-radius:6px;padding:1px 5px;margin:1px;font-size:10.5px">'+esc(String(m).split(' - ')[0])+' <span onclick="ogDelModulo('+i+','+j+')" style="cursor:pointer;font-weight:700">×</span></span>').join('');
       const modInput=(it.modulos||[]).length>=5?'<span style="font-size:10px;color:var(--muted)">máx 5</span>':'<input id="ogmod_'+i+'" placeholder="+ módulo" autocomplete="off" onfocus="comboMod('+i+')" oninput="comboMod('+i+')" onblur="comboHideDelayed()" style="width:100%;'+inp+'">';
@@ -2688,7 +2688,7 @@ function renderOGItems(){
       +'<td><input type="text" inputmode="decimal" value="'+fmtNum(it.cant,2)+'" onfocus="this.value=(OG_ITEMS['+i+'].cant!=null?String(OG_ITEMS['+i+'].cant):\'\')" oninput="OG_ITEMS['+i+'].cant=parseNum(this.value);updateOGTotal()" onblur="this.value=fmtNum(OG_ITEMS['+i+'].cant,2)" style="width:100%;text-align:right;'+inp+'"></td>'
       +'<td><select onchange="OG_ITEMS['+i+'].um=this.value" style="width:100%;text-align:center;text-align-last:center;padding-left:2px;padding-right:2px;'+inp+'">'+UM_LIST.map(u=>'<option'+(u===(it.um||'UNI')?' selected':'')+'>'+u+'</option>').join('')+'</select></td>'
       +'<td><select onchange="OG_ITEMS['+i+'].cert_modo=this.value" style="width:100%;'+inp+'" title="Cómo se certifica este renglón"><option value="pct"'+(it.cert_modo!=='unid'?' selected':'')+'>%</option><option value="unid"'+(it.cert_modo==='unid'?' selected':'')+'>Unid</option></select></td>'
-      +'<td><input type="text" inputmode="decimal" value="'+fmtNum(it.precio_unit,3)+'" onfocus="this.value=(OG_ITEMS['+i+'].precio_unit!=null?String(OG_ITEMS['+i+'].precio_unit):\'\')" oninput="OG_ITEMS['+i+'].precio_unit=parseNum(this.value);updateOGTotal()" onblur="this.value=fmtNum(OG_ITEMS['+i+'].precio_unit,3)" style="width:100%;text-align:right;'+inp+'"></td>'
+      +'<td><input type="text" inputmode="decimal" value="'+ogMonedaSym()+fmtNum(it.precio_unit,3)+'" onfocus="this.value=(OG_ITEMS['+i+'].precio_unit!=null?String(OG_ITEMS['+i+'].precio_unit):\'\')" oninput="OG_ITEMS['+i+'].precio_unit=parseNum(this.value);updateOGTotal()" onblur="this.value=(OG_ITEMS['+i+'].precio_unit!=null?ogMonedaSym()+fmtNum(OG_ITEMS['+i+'].precio_unit,3):\'\')" style="width:100%;text-align:right;'+inp+'"></td>'
       +'<td id="ogit_'+i+'" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+fmtImporte(itemTotal(it))+'</td>'
       +'<td><button class="iconbtn del" onclick="delOGItem('+i+')">'+ICO.del+'</button></td></tr>'; }).join('')
     +'</tbody></table><datalist id="ogArtDL">'+artDL+'</datalist><datalist id="ogClasDL">'+clasDL+'</datalist><datalist id="ogModDL">'+modDL+'</datalist>';
