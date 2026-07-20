@@ -2319,6 +2319,7 @@ function opsView(){
   let pagos=(mem.pagos||[]).slice();
   if(!pagos.length) return '<div class="card"><div class="empty">Todavía no se registraron pagos / órdenes de pago.</div></div>';
   pagos=pagos.filter(opPassFilter);   // filtro tipo Excel
+  if(OP_VER==='pend') pagos=pagos.filter(p=>!p.registrado); else if(OP_VER==='reg') pagos=pagos.filter(p=>p.registrado);
   pagos.sort((a,b)=>((+a.op_numero||1e9)-(+b.op_numero||1e9)) || (String(a.numero||'').localeCompare(String(b.numero||''))));
   let totARS=0, totUSD=0;
   const fmt2=x=>(+x||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -2330,7 +2331,12 @@ function opsView(){
     else { mARS=imp; mUSD = tc? imp/tc : null; }
     if(mUSD!=null) totUSD+=mUSD; if(mARS!=null) totARS+=mARS;
     const caja=CAJAS[mon]?CAJAS[mon].nombre:mon;
-    return '<tr><td><strong>OP '+esc(p.op_numero!=null?p.op_numero:'—')+'</strong></td>'
+    const cb = p.registrado ? '' : '<input type="checkbox" '+(OP_SEL.has(+p.id)?'checked':'')+' onchange="opToggleSel('+p.id+')">';
+    const regCell = p.registrado ? '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>' : '<span style="color:var(--muted)">—</span>';
+    let acc = COND_SIN_CAJA.includes(o.condicion) ? '<span style="color:var(--muted);font-size:11px">Finanzas</span>' : '<button class="btn ghost sm" onclick="exportAsientoTangoOP('+p.id+')">Asiento</button>';
+    if(p.registrado){ if(canAdmin()) acc += ' <button class="btn ghost sm" onclick="opDesmarcar('+p.id+')">Desmarcar</button>'; }
+    else if(canPago()||canFinanzas()){ acc += ' <button class="iconbtn del" title="Eliminar OP" onclick="askDelPago('+p.id+')">'+ICO.del+'</button>'; }
+    return '<tr'+(p.registrado?' style="background:#f6f5ee"':'')+'><td style="text-align:center">'+cb+'</td><td><strong>OP '+esc(p.op_numero!=null?p.op_numero:'—')+'</strong></td>'
       +'<td>'+fmtDate(p.fecha)+'</td>'
       +'<td>OG '+esc(p.numero||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(o.proveedor_cod||'')+'</td>'
@@ -2342,18 +2348,25 @@ function opsView(){
       +'<td style="text-align:right">'+(tc?fmtNum(tc,2):'—')+'</td>'
       +'<td style="text-align:right">'+(mUSD!=null?'US$ '+fmt2(mUSD):'—')+'</td>'
       +'<td style="text-align:right"><strong>'+(mARS!=null?'$ '+fmt2(mARS):'—')+'</strong></td>'
-      +'<td style="text-align:center">'+(COND_SIN_CAJA.includes(o.condicion)?'<span style="color:var(--muted);font-size:11px">Finanzas</span>':'<button class="btn ghost sm" onclick="exportAsientoTangoOP('+p.id+')">Asiento</button>')+'</td></tr>';
-  }).join('') || '<tr><td colspan="13" style="color:var(--muted);padding:14px">Ningún pago coincide con los filtros.</td></tr>';
-  const foot='<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td colspan="10" style="text-align:right">Total mostrado</td>'
+      +'<td style="text-align:center">'+regCell+'</td>'
+      +'<td style="text-align:center;white-space:nowrap">'+acc+'</td></tr>';
+  }).join('') || '<tr><td colspan="15" style="color:var(--muted);padding:14px">Ningún pago coincide con los filtros.</td></tr>';
+  const foot='<tr style="border-top:2px solid var(--line-strong);font-weight:700"><td colspan="11" style="text-align:right">Total mostrado</td>'
     +'<td style="text-align:right">'+(totUSD?'US$ '+fmt2(totUSD):'—')+'</td>'
-    +'<td style="text-align:right">'+(totARS?'$ '+fmt2(totARS):'—')+'</td><td></td></tr>';
+    +'<td style="text-align:right">'+(totARS?'$ '+fmt2(totARS):'—')+'</td><td></td><td></td></tr>';
   const th=(label,col)=>{ if(!col) return '<th style="white-space:nowrap">'+label+'</th>';
     const opener= col==='fecha' ? 'openOpFechaFilter(event)' : ("openOpFilter('"+col+"',event)");
     return '<th style="white-space:nowrap">'+label+' <button class="opfbtn" onclick="'+opener+'" title="Filtrar" style="border:none;background:none;cursor:pointer;padding:0 2px;font-size:11px;color:'+(opFilterActive(col)?'var(--olive-deep)':'var(--muted)')+'">▾</button></th>'; };
   const hayFiltro=Object.keys(OP_FILTRO).some(c=>opFilterActive(c))||opFilterActive('fecha');
   const limpiar = hayFiltro ? '<button class="btn ghost sm" style="margin-left:auto" onclick="opFilterClearAll()">Limpiar filtros</button>' : '';
-  return '<div class="card"><div class="card-h"><h3>Órdenes de pago</h3><span class="meta">Una fila por OG pagada. Filtrá por columna con la flechita ▾. El total se recalcula con lo filtrado.</span>'+limpiar+'</div>'
-    +'<table class="grid" style="font-size:12.5px"><thead><tr>'+th('OP N°','op')+th('Fecha','fecha')+th('OG','og')+th('Prov.','prov')+th('Clasif.','clasif')+th('SOLP','solp')+th('Comprador','comprador')+th('Medio','medio')+th('Caja','caja')+'<th style="text-align:right">TC pago</th><th style="text-align:right">Monto USD</th><th style="text-align:right">Monto ARS</th><th style="text-align:center">Asiento</th></tr></thead><tbody>'+rows+foot+'</tbody></table></div>';
+  const selN=OP_SEL.size;
+  const verSel=v=>OP_VER===v?' selected':'';
+  const toolbar='<div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    +'<select onchange="opSetVer(this.value)" style="border:1px solid var(--line-strong);border-radius:7px;padding:4px 8px;font-size:12px"><option value="todas"'+verSel('todas')+'>Todas</option><option value="pend"'+verSel('pend')+'>Pendientes de registrar</option><option value="reg"'+verSel('reg')+'>Registradas</option></select>'
+    +(selN?'<button class="btn ghost sm" onclick="opGenAsientoSel()">Asiento de '+selN+' sel.</button><button class="btn sm" onclick="opMarcarSel()">Marcar '+selN+' registradas</button>':'')
+    +limpiar+'</div>';
+  return '<div class="card"><div class="card-h" style="flex-wrap:wrap"><h3>Órdenes de pago</h3><span class="meta">Una fila por OG pagada. Seleccioná OPs para generar el asiento del lote y marcarlas como registradas.</span>'+toolbar+'</div>'
+    +'<table class="grid" style="font-size:12.5px"><thead><tr><th></th>'+th('OP N°','op')+th('Fecha','fecha')+th('OG','og')+th('Prov.','prov')+th('Clasif.','clasif')+th('SOLP','solp')+th('Comprador','comprador')+th('Medio','medio')+th('Caja','caja')+'<th style="text-align:right">TC pago</th><th style="text-align:right">Monto USD</th><th style="text-align:right">Monto ARS</th><th style="text-align:center">Registrado</th><th style="text-align:center">Acciones</th></tr></thead><tbody>'+rows+foot+'</tbody></table></div>';
 }
 
 function colaView(cola){
@@ -2586,7 +2599,12 @@ function resumenPagos(cond_match, tipoTxt, esTarj){
   const fmt2=x=>(+x||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const rows=pagos.map(p=>{
     const o=ogById(p.og_id)||{}; const m=pagoMontoUSDARS(p);
-    return '<tr><td><strong>OP '+esc(p.op_numero!=null?p.op_numero:'—')+'</strong></td>'
+    const cb = p.registrado ? '' : '<input type="checkbox" '+(OP_SEL.has(+p.id)?'checked':'')+' onchange="opToggleSel('+p.id+')">';
+    const regCell = p.registrado ? '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>' : '<span style="color:var(--muted)">—</span>';
+    let acc = COND_SIN_CAJA.includes(o.condicion) ? '<span style="color:var(--muted);font-size:11px">Finanzas</span>' : '<button class="btn ghost sm" onclick="exportAsientoTangoOP('+p.id+')">Asiento</button>';
+    if(p.registrado){ if(canAdmin()) acc += ' <button class="btn ghost sm" onclick="opDesmarcar('+p.id+')">Desmarcar</button>'; }
+    else if(canPago()||canFinanzas()){ acc += ' <button class="iconbtn del" title="Eliminar OP" onclick="askDelPago('+p.id+')">'+ICO.del+'</button>'; }
+    return '<tr'+(p.registrado?' style="background:#f6f5ee"':'')+'><td style="text-align:center">'+cb+'</td><td><strong>OP '+esc(p.op_numero!=null?p.op_numero:'—')+'</strong></td>'
       +'<td>'+fmtDate(p.fecha)+'</td><td>OG '+esc(p.numero||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(o.proveedor_cod||'')+'</td>'
       +'<td>'+esc(o.clasif_og||'')+'</td>'
@@ -2688,12 +2706,51 @@ function askDelPago(id){
     '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn danger" onclick="confirmDelPago('+id+')">Eliminar</button>');
 }
 async function confirmDelPago(id){
-  if(!canPago()){ toast('Solo el tesorero puede eliminar pagos.'); return; }
+  if(!(canPago()||canFinanzas())){ toast('No tenés permiso para eliminar pagos.'); return; }
+  const p=(mem.pagos||[]).find(x=>String(x.id)===String(id));
+  if(p && p.registrado){ toast('Esta OP ya está registrada contablemente. Hay que desmarcarla primero (solo admin).'); closeModal(); return; }
   if(DEMO_MODE){ mem.pagos=(mem.pagos||[]).filter(p=>String(p.id)!==String(id)); }
   else { await sbFetch('/pagos?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'}); await reloadDB(); }
   closeModal(); toast('Pago eliminado'); renderTesoreria();
 }
 window.askDelPago=askDelPago; window.confirmDelPago=confirmDelPago;
+/* ---- Selección múltiple / registro contable de OPs ---- */
+let OP_SEL=new Set(); let OP_VER='todas';
+function canAdmin(){ return ROLE.admin; }
+function opToggleSel(id){ id=+id; if(OP_SEL.has(id)) OP_SEL.delete(id); else OP_SEL.add(id); renderTesoreria(); }
+function opSetVer(v){ OP_VER=v; renderTesoreria(); }
+function opGenAsientoSel(){
+  if(typeof XLSX==='undefined'){ toast('Necesitás conexión para exportar.'); return; }
+  const sel=(mem.pagos||[]).filter(p=>OP_SEL.has(+p.id));
+  const gen=sel.filter(p=>{ const o=ogById(p.og_id)||{}; return !COND_SIN_CAJA.includes(o.condicion); });
+  if(!gen.length){ toast('Seleccioná al menos una OP que genere asiento (efectivo/contado).'); return; }
+  const s=asientoTangoSheetsOP(gen);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s.cab),'Asientos contables');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s.ren),'Renglones');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s.cot),'Cotizaciones');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s.aux),'Auxiliares');
+  XLSX.writeFile(wb,'Asiento_Tango_lote_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Asiento del lote generado ('+gen.length+' OP)');
+}
+async function opMarcarSel(){
+  if(!canFinanzas()){ toast('Solo Finanzas o admin pueden marcar como registradas.'); return; }
+  const sel=(mem.pagos||[]).filter(p=>OP_SEL.has(+p.id) && !p.registrado);
+  if(!sel.length){ toast('No hay OPs seleccionadas sin registrar.'); return; }
+  const nro='PEND-'+sel.map(p=>'OP'+(p.op_numero!=null?p.op_numero:p.id)).join('-');
+  for(const p of sel){ p.registrado=true; p.nro_asiento=nro;
+    if(!DEMO_MODE){ try{ await sbFetch('/pagos?id=eq.'+p.id,{method:'PATCH',body:JSON.stringify({registrado:true,nro_asiento:nro})}); }catch(e){ toast('Error guardando: '+(e&&e.message?e.message:e)); } } }
+  OP_SEL.clear(); toast(sel.length+' OP marcadas ('+nro+'). Reemplazá el N° por el que devuelva Tango.'); renderTesoreria();
+}
+async function opDesmarcar(id){
+  if(!canAdmin()){ toast('Solo vos (admin) podés desmarcar una OP registrada.'); return; }
+  const p=(mem.pagos||[]).find(x=>String(x.id)===String(id)); if(!p) return;
+  p.registrado=false;
+  if(!DEMO_MODE){ try{ await sbFetch('/pagos?id=eq.'+id,{method:'PATCH',body:JSON.stringify({registrado:false})}); }catch(e){ toast('Error: '+(e&&e.message?e.message:e)); } }
+  toast('OP desmarcada'); renderTesoreria();
+}
+window.canAdmin=canAdmin; window.opToggleSel=opToggleSel; window.opSetVer=opSetVer;
+window.opGenAsientoSel=opGenAsientoSel; window.opMarcarSel=opMarcarSel; window.opDesmarcar=opDesmarcar;
 
 function arqueoView(){
   const card=(mon)=>{ const c=CAJAS[mon]; const ini=(mem.caja&&mem.caja[mon+'_ini'])||0; const movs=cajaMovs(mon);
