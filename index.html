@@ -3490,9 +3490,9 @@ function paintDic(){
     if(!verConf) ct=ct.filter(r=>!r.confidencial);
     if(q) ct=ct.filter(r=>((r.cod||'')+' '+(r.desc||'')+' '+(r.clase||'')+' '+(r.tipo||'')).toLowerCase().includes(q));
     const cCol=verConf?'<th style="text-align:center;width:70px">Confid.</th>':'';
-    html='<div class="card"><div class="card-h" style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Cuentas contables</h3><span class="meta">'+ct.length+' de '+(CONTA_DB.cuentas||[]).length+'</span>'+(verConf?'<span style="margin-left:auto;font-size:11px;color:var(--muted)">Tildá lo confidencial: solo lo ven usuarios habilitados</span>':'')+'</div>'
-      +'<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Clase</th><th>Tipo</th><th>Saldo</th><th>Usa aux.</th><th>Habil.</th>'+cCol+'</tr></thead><tbody>'
-      +ct.slice(0,600).map(r=>'<tr><td><strong>'+esc(r.cod)+'</strong></td><td>'+esc(r.desc)+(r.confidencial?' <span class="badge b-ambar">confid.</span>':'')+'</td><td style="font-size:11.5px">'+esc(r.clase||'—')+'</td><td style="font-size:11.5px">'+esc(r.tipo||'—')+'</td><td style="font-size:11.5px">'+esc(r.saldo||'—')+'</td><td style="font-size:11.5px">'+esc(r.usa_aux||'—')+'</td><td style="font-size:11.5px">'+esc(r.habil||'—')+'</td>'+(verConf?'<td style="text-align:center"><input type="checkbox" '+(r.confidencial?'checked':'')+' onclick="toggleConfidCuenta(\''+esc(r.cod)+'\')"></td>':'')+'</tr>').join('')+'</tbody></table></div>'
+    html='<div class="card"><div class="card-h" style="display:flex;align-items:center;gap:12px"><h3 style="margin:0">Cuentas contables</h3><span class="meta">'+ct.length+' de '+(CONTA_DB.cuentas||[]).length+'</span>'+(verConf?'<span style="margin-left:16px;font-size:11px;color:var(--muted)">Tildá lo confidencial: solo lo ven usuarios habilitados</span>':'')+'<button class="btn sm" style="margin-left:auto" onclick="openNuevaCuenta()">'+ICO.plus+'Nueva cuenta</button></div>'
+      +'<div class="dic-scroll"><table class="grid"><thead><tr><th>Código</th><th>Descripción</th><th>Clase</th><th>Tipo</th><th>Saldo</th><th>Usa aux.</th><th>Habil.</th>'+cCol+'<th style="text-align:center">Acciones</th></tr></thead><tbody>'
+      +ct.slice(0,600).map(r=>'<tr><td><strong>'+esc(r.cod)+'</strong></td><td>'+esc(r.desc)+(r.confidencial?' <span class="badge b-ambar">confid.</span>':'')+'</td><td style="font-size:11.5px">'+esc(r.clase||'—')+'</td><td style="font-size:11.5px">'+esc(r.tipo||'—')+'</td><td style="font-size:11.5px">'+esc(r.saldo||'—')+'</td><td style="font-size:11.5px">'+esc(r.usa_aux||'—')+'</td><td style="font-size:11.5px">'+esc(r.habil||'—')+'</td>'+(verConf?'<td style="text-align:center"><input type="checkbox" '+(r.confidencial?'checked':'')+' onclick="toggleConfidCuenta(\''+esc(r.cod)+'\')"></td>':'')+'<td style="text-align:center;white-space:nowrap"><button class="iconbtn" title="Editar" onclick="openEditCuenta(\''+esc(r.cod)+'\')">'+ICO.edit+'</button><button class="iconbtn del" title="Eliminar" onclick="askDelCuenta(\''+esc(r.cod)+'\')">'+ICO.del+'</button></td>'+'</tr>').join('')+'</tbody></table></div>'
       +(ct.length>600?'<div style="font-size:11.5px;color:var(--muted);padding:8px 15px">Mostrando 600 de '+ct.length+'. Usá el buscador.</div>':'')+'</div>';
   } else if(DIC_TAB==='aux'){
     const verConf=canSeeConfid();
@@ -3540,6 +3540,79 @@ async function toggleConfidCuenta(cod){
   paintDic();
 }
 window.toggleConfidCuenta=toggleConfidCuenta;
+function cuentaByCod(cod){ return (CONTA_DB.cuentas||[]).find(x=>String(x.cod)===String(cod)); }
+function openNuevaCuenta(){
+  const fld=(id,lbl,ph)=>'<div class="field"><label>'+lbl+'</label><input id="'+id+'" type="text" placeholder="'+(ph||'')+'"></div>';
+  openModal('Nueva cuenta contable',
+    '<div class="frow c2">'+fld('nc_cod','Código *','ej. 52000099')+fld('nc_clase','Clase','Activo / Pasivo / ...')+'</div>'
+    +fld('nc_desc','Descripción *','Nombre de la cuenta')
+    +'<div class="frow c2">'+fld('nc_tipo','Tipo','Monetaria / No monetaria')+fld('nc_saldo','Saldo','Deudor / Acreedor')+'</div>'
+    +'<div class="frow c2">'+fld('nc_usaaux','Usa aux.','Si / No')+fld('nc_habil','Habil.','Si / No')+'</div>'
+    +'<label class="field" style="display:flex;align-items:center;gap:8px;flex-direction:row"><input id="nc_conf" type="checkbox" style="width:auto"> Confidencial (solo usuarios habilitados)</label>',
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="guardarNuevaCuenta()">Guardar cuenta</button>');
+}
+window.openNuevaCuenta=openNuevaCuenta;
+async function guardarNuevaCuenta(){
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const cod=g('nc_cod'), desc=g('nc_desc');
+  if(!cod||!desc){ toast('Código y descripción son obligatorios.'); return; }
+  if(cuentaByCod(cod)){ toast('Ya existe una cuenta con ese código.'); return; }
+  const conf=!!document.getElementById('nc_conf').checked;
+  const row={ cod:cod, descripcion:desc, clase:g('nc_clase'), tipo:g('nc_tipo'), saldo:g('nc_saldo'), usa_aux:g('nc_usaaux'), habil:g('nc_habil'), confidencial:conf };
+  if(!DEMO_MODE){ try{ await sbFetch('/cuentas_contables',{method:'POST',body:JSON.stringify(row)}); }catch(e){ toast('No se pudo guardar: '+(e&&e.message?e.message:e)); return; } }
+  CONTA_DB.cuentas.push({cod:cod,desc:desc,clase:row.clase,tipo:row.tipo,saldo:row.saldo,usa_aux:row.usa_aux,habil:row.habil,confidencial:conf});
+  CONTA_DB.cuentas.sort((a,b)=>String(a.cod).localeCompare(String(b.cod),'es',{numeric:true}));
+  closeModal(); toast('Cuenta agregada'); renderDic();
+}
+window.guardarNuevaCuenta=guardarNuevaCuenta;
+function openEditCuenta(cod){
+  const c=cuentaByCod(cod); if(!c){ toast('No encontré la cuenta.'); return; }
+  const fld=(id,lbl,val,ro)=>'<div class="field"><label>'+lbl+'</label><input id="'+id+'" type="text" value="'+esc(val||'')+'"'+(ro?' readonly style="background:#f3f1e8"':'')+'></div>';
+  openModal('Editar cuenta '+esc(c.cod),
+    '<div class="frow c2">'+fld('ec_cod','Código (no editable)',c.cod,true)+fld('ec_clase','Clase',c.clase)+'</div>'
+    +fld('ec_desc','Descripción *',c.desc)
+    +'<div class="frow c2">'+fld('ec_tipo','Tipo',c.tipo)+fld('ec_saldo','Saldo',c.saldo)+'</div>'
+    +'<div class="frow c2">'+fld('ec_usaaux','Usa aux.',c.usa_aux)+fld('ec_habil','Habil.',c.habil)+'</div>'
+    +'<label class="field" style="display:flex;align-items:center;gap:8px;flex-direction:row"><input id="ec_conf" type="checkbox" style="width:auto" '+(c.confidencial?'checked':'')+'> Confidencial (solo usuarios habilitados)</label>',
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="guardarEditCuenta(\''+esc(c.cod)+'\')">Guardar cambios</button>');
+}
+window.openEditCuenta=openEditCuenta;
+async function guardarEditCuenta(cod){
+  const c=cuentaByCod(cod); if(!c) return;
+  const g=id=>(document.getElementById(id).value||'').trim();
+  const desc=g('ec_desc'); if(!desc){ toast('La descripción es obligatoria.'); return; }
+  const conf=!!document.getElementById('ec_conf').checked;
+  const patch={ descripcion:desc, clase:g('ec_clase'), tipo:g('ec_tipo'), saldo:g('ec_saldo'), usa_aux:g('ec_usaaux'), habil:g('ec_habil'), confidencial:conf };
+  if(!DEMO_MODE){ try{ await sbFetch('/cuentas_contables?cod=eq.'+encodeURIComponent(cod),{method:'PATCH',body:JSON.stringify(patch)}); }catch(e){ toast('No se pudo guardar: '+(e&&e.message?e.message:e)); return; } }
+  c.desc=desc; c.clase=patch.clase; c.tipo=patch.tipo; c.saldo=patch.saldo; c.usa_aux=patch.usa_aux; c.habil=patch.habil; c.confidencial=conf;
+  closeModal(); toast('Cuenta actualizada'); renderDic();
+}
+window.guardarEditCuenta=guardarEditCuenta;
+function cuentaEnUso(cod){
+  const s=String(cod);
+  try{ if(typeof ART_CUENTA!=='undefined' && Object.values(ART_CUENTA).some(v=>String(v)===s)) return true; }catch(e){}
+  try{ if(typeof CLASIF_MAP!=='undefined' && Object.values(CLASIF_MAP).some(r=>r&&String(r.cuenta)===s)) return true; }catch(e){}
+  try{ if(typeof CAJAS!=='undefined' && ((CAJAS.ARS&&String(CAJAS.ARS.cod)===s)||(CAJAS.USD&&String(CAJAS.USD.cod)===s))) return true; }catch(e){}
+  try{ if(typeof CONTRAPARTIDA!=='undefined' && String(CONTRAPARTIDA.cod)===s) return true; }catch(e){}
+  try{ if(typeof TARJETA_CTA!=='undefined' && Object.values(TARJETA_CTA).some(v=>String(v)===s)) return true; }catch(e){}
+  return false;
+}
+window.cuentaEnUso=cuentaEnUso;
+function askDelCuenta(cod){
+  const c=cuentaByCod(cod); if(!c) return;
+  if(cuentaEnUso(cod)){ toast('No se puede borrar: la cuenta está asociada al motor (clasificación, artículo, caja o tarjeta). Desasociala primero y recién ahí podrás eliminarla.'); return; }
+  openModal('Eliminar cuenta '+esc(c.cod),
+    '<p style="margin:0;font-size:14px;color:#5f5c52;line-height:1.5">Vas a eliminar <strong>'+esc(c.desc||c.cod)+'</strong> ('+esc(c.cod)+'). Esta acción no se puede deshacer. ¿Confirmás?</p>',
+    '<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn danger" onclick="confirmDelCuenta(\''+esc(cod)+'\')">Eliminar</button>');
+}
+window.askDelCuenta=askDelCuenta;
+async function confirmDelCuenta(cod){
+  if(cuentaEnUso(cod)){ toast('La cuenta está asociada al motor; no se puede borrar.'); closeModal(); return; }
+  if(!DEMO_MODE){ try{ await sbFetch('/cuentas_contables?cod=eq.'+encodeURIComponent(cod),{method:'DELETE',prefer:'return=minimal'}); }catch(e){ toast('No se pudo eliminar: '+(e&&e.message?e.message:e)); return; } }
+  CONTA_DB.cuentas=(CONTA_DB.cuentas||[]).filter(x=>String(x.cod)!==String(cod));
+  closeModal(); toast('Cuenta eliminada'); renderDic();
+}
+window.confirmDelCuenta=confirmDelCuenta;
 async function toggleConfidAux(cod){
   const t=(CONTA_DB.tipos||[]).find(x=>String(x.cod)===String(cod)); if(!t) return;
   const nv=!t.confidencial; t.confidencial=nv;
