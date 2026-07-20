@@ -2332,7 +2332,7 @@ function opsView(){
     if(mUSD!=null) totUSD+=mUSD; if(mARS!=null) totARS+=mARS;
     const caja=CAJAS[mon]?CAJAS[mon].nombre:mon;
     const cb = p.registrado ? '' : '<input type="checkbox" '+(OP_SEL.has(+p.id)?'checked':'')+' onchange="opToggleSel('+p.id+')">';
-    const regCell = p.registrado ? '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>' : '<span style="color:var(--muted)">—</span>';
+    const regCell = p.registrado ? (canFinanzas() ? '<div style="display:flex;align-items:center;gap:4px"><span style="color:var(--olive-deep)">✓</span><input value="'+esc(p.nro_asiento||'')+'" title="Reemplazá por el N° de Tango" onchange="setPagoField('+p.id+',\'nro_asiento\',this.value)" style="border:1px solid var(--line-strong);border-radius:6px;padding:3px 5px;font-size:10.5px;width:110px"></div>' : '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>') : '<span style="color:var(--muted)">—</span>';
     let acc = COND_SIN_CAJA.includes(o.condicion) ? '<span style="color:var(--muted);font-size:11px">Finanzas</span>' : '<button class="btn ghost sm" onclick="exportAsientoTangoOP('+p.id+')">Asiento</button>';
     if(p.registrado){ if(canAdmin()) acc += ' <button class="btn ghost sm" onclick="opDesmarcar('+p.id+')">Desmarcar</button>'; }
     else if(canPago()||canFinanzas()){ acc += ' <button class="iconbtn del" title="Eliminar OP" onclick="askDelPago('+p.id+')">'+ICO.del+'</button>'; }
@@ -2600,7 +2600,7 @@ function resumenPagos(cond_match, tipoTxt, esTarj){
   const rows=pagos.map(p=>{
     const o=ogById(p.og_id)||{}; const m=pagoMontoUSDARS(p);
     const cb = p.registrado ? '' : '<input type="checkbox" '+(OP_SEL.has(+p.id)?'checked':'')+' onchange="opToggleSel('+p.id+')">';
-    const regCell = p.registrado ? '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>' : '<span style="color:var(--muted)">—</span>';
+    const regCell = p.registrado ? (canFinanzas() ? '<div style="display:flex;align-items:center;gap:4px"><span style="color:var(--olive-deep)">✓</span><input value="'+esc(p.nro_asiento||'')+'" title="Reemplazá por el N° de Tango" onchange="setPagoField('+p.id+',\'nro_asiento\',this.value)" style="border:1px solid var(--line-strong);border-radius:6px;padding:3px 5px;font-size:10.5px;width:110px"></div>' : '<span style="color:var(--olive-deep);font-size:11px;font-weight:600">✓ '+esc(p.nro_asiento||'')+'</span>') : '<span style="color:var(--muted)">—</span>';
     let acc = COND_SIN_CAJA.includes(o.condicion) ? '<span style="color:var(--muted);font-size:11px">Finanzas</span>' : '<button class="btn ghost sm" onclick="exportAsientoTangoOP('+p.id+')">Asiento</button>';
     if(p.registrado){ if(canAdmin()) acc += ' <button class="btn ghost sm" onclick="opDesmarcar('+p.id+')">Desmarcar</button>'; }
     else if(canPago()||canFinanzas()){ acc += ' <button class="iconbtn del" title="Eliminar OP" onclick="askDelPago('+p.id+')">'+ICO.del+'</button>'; }
